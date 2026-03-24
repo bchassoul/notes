@@ -1,0 +1,23 @@
+.cols-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.col {
+  padding: 0 1rem;
+  min-width: 50%;
+}
+
+.col + .col {
+  border-left: 1px solid var(--vp-c-divider);
+}
+
+/* Prevent mermaid diamond (and other) shapes from clipping their text labels */
+.mermaid svg,
+svg[id^="mermaid"] {
+  overflow: visible;
+}
+
+.mermaid .label foreignObject {
+  overflow: visible;
+}
