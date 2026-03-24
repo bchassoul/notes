@@ -6,9 +6,10 @@
 
 React is a UI library built around one fundamental idea:
 
-::: tip THE CORE EQUATION
-**UI = f(state)**. When state changes, React re-renders the affected parts of the tree.
-:::
+> [!TIP]
+> **THE CORE EQUATION**
+>
+> **UI = f(state)**. When state changes, React re-renders the affected parts of the tree.
 
 That single idea explains most of React's design decisions, performance characteristics, and failure modes.
 
@@ -63,9 +64,10 @@ The DOM holds the value (accessed via `ref`). Use for simple cases, file inputs,
 </div>
 </div>
 
-::: warning COMMON MISTAKE
-Mixing controlled and uncontrolled for the same input field (e.g., passing `value` but no `onChange`). React will warn you, and behavior becomes unpredictable.
-:::
+> [!WARNING]
+> **COMMON MISTAKE**
+>
+> Mixing controlled and uncontrolled for the same input field (e.g., passing `value` but no `onChange`). React will warn you, and behavior becomes unpredictable.
 
 ---
 
@@ -77,17 +79,19 @@ Hooks let you attach behavior and state to a component in a composable, reusable
 
 Declares a piece of state local to the component.
 
-::: warning ASYNC UPDATES
-Setting state schedules a re-render; it does not mutate immediately. If you read state immediately after calling `setState`, you will get the old value. Always use the updater function `setCount(prev => prev + 1)` when the new state depends on the old state.
-:::
+> [!WARNING]
+> **ASYNC UPDATES**
+>
+> Setting state schedules a re-render; it does not mutate immediately. If you read state immediately after calling `setState`, you will get the old value. Always use the updater function `setCount(prev => prev + 1)` when the new state depends on the old state.
 
 ### 2.2 `useEffect`
 
 Runs side effects after the component renders.
 
-::: tip SYNCHRONIZATION, NOT LIFECYCLE
-`useEffect` synchronizes your component with something outside of React (network, DOM, subscriptions). Do not use it to transform data or compute derived state.
-:::
+> [!TIP]
+> **SYNCHRONIZATION, NOT LIFECYCLE**
+>
+> `useEffect` synchronizes your component with something outside of React (network, DOM, subscriptions). Do not use it to transform data or compute derived state.
 
 **Dependency Array Rules:**
 - Omitted: Runs after every render.
@@ -101,9 +105,10 @@ Both are memoization hooks. They prevent recomputation or re-creation on every r
 - **`useCallback`**: Memoizes a function reference.
 - **`useMemo`**: Memoizes a computed value.
 
-::: warning PREMATURE OPTIMIZATION
-Wrapping everything in `useCallback` / `useMemo` by default adds memory overhead and complexity without benefit. Only use them when passing props to `React.memo` components or preventing expensive recalculations.
-:::
+> [!WARNING]
+> **PREMATURE OPTIMIZATION**
+>
+> Wrapping everything in `useCallback` / `useMemo` by default adds memory overhead and complexity without benefit. Only use them when passing props to `React.memo` components or preventing expensive recalculations.
 
 ### 2.4 `useRef`
 
@@ -145,9 +150,10 @@ When multiple components need to work together implicitly (like a `<select>` and
 
 A JavaScript error in a part of the UI shouldn't break the whole app. Error boundaries catch errors anywhere in their child component tree and display a fallback UI.
 
-::: info SENIOR SIGNAL
-Currently, Error Boundaries must be written as Class Components. A senior engineer knows to place them strategically (e.g., around route transitions or complex widgets) so that a failure in a minor widget doesn't crash the entire page to a white screen.
-:::
+> [!NOTE]
+> **SENIOR SIGNAL**
+>
+> Currently, Error Boundaries must be written as Class Components. A senior engineer knows to place them strategically (e.g., around route transitions or complex widgets) so that a failure in a minor widget doesn't crash the entire page to a white screen.
 
 ### 3.4 Lifting State Up
 
@@ -190,9 +196,10 @@ UI state that only exists in the browser (e.g., Modal open, selected tab, form d
 </div>
 </div>
 
-::: tip THE MODERN APPROACH
-Do not put Server State in a global Redux/Zustand store. Use a dedicated Server State library (like React Query, Apollo, or SWR) to handle caching and fetching, and keep Client State lightweight.
-:::
+> [!TIP]
+> **THE MODERN APPROACH**
+>
+> Do not put Server State in a global Redux/Zustand store. Use a dedicated Server State library (like React Query, Apollo, or SWR) to handle caching and fetching, and keep Client State lightweight.
 
 ---
 
@@ -325,17 +332,19 @@ Run on the server (for SSR) *and* in the browser. They have access to browser AP
 </div>
 </div>
 
-::: tip THE RSC MENTAL MODEL
-Think of Server Components as the skeleton of your app, fetching data and passing it down. Think of Client Components as the interactive muscles attached to that skeleton. Pass Server Components as `children` into Client Components to interleave them without making everything a Client Component.
-:::
+> [!TIP]
+> **THE RSC MENTAL MODEL**
+>
+> Think of Server Components as the skeleton of your app, fetching data and passing it down. Think of Client Components as the interactive muscles attached to that skeleton. Pass Server Components as `children` into Client Components to interleave them without making everything a Client Component.
 
 ---
 
 ## 8. Testing Philosophy
 
-::: tip THE GOLDEN RULE
-Test behavior from the user's perspective, not implementation details.
-:::
+> [!TIP]
+> **THE GOLDEN RULE**
+>
+> Test behavior from the user's perspective, not implementation details.
 
 Prefer:
 - Finding elements the way a user would (by role, label, text).

@@ -4,13 +4,14 @@
 
 A relational database stores data in tables with rows and columns, and enforces relationships between tables using foreign keys.
 
-::: tip KEY PRINCIPLES
-
-1. **ACID transactions** — operations are atomic, consistent, isolated, and durable
-2. **Referential integrity** — the database enforces that related records exist
-3. **Flexible querying** — SQL lets you ask arbitrary questions without pre-designing every access pattern
-4. **Mature tooling** — decades of optimization, monitoring, and operational knowledge
-   :::
+> [!TIP]
+> **KEY PRINCIPLES**
+>
+>
+> 1. **ACID transactions** — operations are atomic, consistent, isolated, and durable
+> 2. **Referential integrity** — the database enforces that related records exist
+> 3. **Flexible querying** — SQL lets you ask arbitrary questions without pre-designing every access pattern
+> 4. **Mature tooling** — decades of optimization, monitoring, and operational knowledge
 
 > A relational database is not just storage. It is a system that enforces invariants about your data at the storage layer.
 
@@ -43,9 +44,10 @@ Committed transactions survive crashes.
 </div>
 </div>
 
-::: info SENIOR IMPLICATION
-ACID is not free — stronger isolation guarantees come with higher locking costs and lower concurrency. Most bugs in concurrent-write systems come from incorrect assumptions about isolation.
-:::
+> [!NOTE]
+> **SENIOR IMPLICATION**
+>
+> ACID is not free — stronger isolation guarantees come with higher locking costs and lower concurrency. Most bugs in concurrent-write systems come from incorrect assumptions about isolation.
 
 ## 3. Keys, Relationships, and Constraints
 
@@ -76,9 +78,8 @@ _Cost:_ Larger, unordered (v4 can hurt index performance).
 </div>
 </div>
 
-::: tip
-UUIDs are common in distributed and multi-tenant SaaS systems because they can be generated without a database round trip and do not expose business-sensitive counts.
-:::
+> [!TIP]
+> UUIDs are common in distributed and multi-tenant SaaS systems because they can be generated without a database round trip and do not expose business-sensitive counts.
 
 ### 3.2 Relationships
 
@@ -95,9 +96,10 @@ When a parent record is deleted, the database can:
 - `SET NULL` — set the foreign key to null
 - `NO ACTION` — defer the check (Postgres default)
 
-::: warning FAILURE SCENARIO
-Choosing the wrong referential integrity option is a common source of silent data corruption or unexpected cascading deletes.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Choosing the wrong referential integrity option is a common source of silent data corruption or unexpected cascading deletes.
 
 ## 4. Indexes
 
@@ -107,9 +109,10 @@ An index is a data structure that speeds up lookups at the cost of write overhea
 - Foreign key columns should almost always be indexed (joins and lookups)
 - Columns used frequently in `WHERE`, `ORDER BY`, or `JOIN` clauses are candidates
 
-::: warning FAILURE SCENARIO
-Adding an index on every column "just in case" → write performance degrades, storage grows, and the query planner may make worse choices.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Adding an index on every column "just in case" → write performance degrades, storage grows, and the query planner may make worse choices.
 
 ### 4.1 Index Types (PostgreSQL)
 
@@ -142,13 +145,14 @@ Index a subset of rows (e.g., `WHERE deleted_at IS NULL`).
 
 A composite index spans multiple columns (e.g., `CREATE INDEX ON users (last_name, first_name)`).
 
-::: tip THE LEFT-PREFIX RULE
-A composite index can only be used if the query filters on the columns from left to right.
-
-- `WHERE last_name = 'Smith'` → Uses index
-- `WHERE last_name = 'Smith' AND first_name = 'John'` → Uses index
-- `WHERE first_name = 'John'` → **Cannot use index** (requires a sequential scan)
-  :::
+> [!TIP]
+> **THE LEFT-PREFIX RULE**
+>
+> A composite index can only be used if the query filters on the columns from left to right.
+>
+> - `WHERE last_name = 'Smith'` → Uses index
+> - `WHERE last_name = 'Smith' AND first_name = 'John'` → Uses index
+> - `WHERE first_name = 'John'` → **Cannot use index** (requires a sequential scan)
 
 ### 4.3 Covering Indexes (Index-Only Scans)
 
@@ -201,12 +205,13 @@ Prevents all anomalies, including phantom reads (running the same query twice an
 </div>
 </div>
 
-::: warning FAILURE SCENARIO
-**Lost Update**
-
-Two concurrent transactions both read a counter, both increment it, both write → final value is incremented by 1 instead of 2.
-_Fix:_ use `SELECT FOR UPDATE` to lock the row, or use an atomic increment.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> **Lost Update**
+>
+> Two concurrent transactions both read a counter, both increment it, both write → final value is incremented by 1 instead of 2.
+> _Fix:_ use `SELECT FOR UPDATE` to lock the row, or use an atomic increment.
 
 ### 5.3 MVCC (Multi-Version Concurrency Control)
 
@@ -276,9 +281,8 @@ _Cost:_ Data duplication, harder to keep consistent.
 </div>
 </div>
 
-::: tip
-Start normalized. Denormalize specific hot paths only when profiling shows a real need. Premature denormalization creates consistency bugs.
-:::
+> [!TIP]
+> Start normalized. Denormalize specific hot paths only when profiling shows a real need. Premature denormalization creates consistency bugs.
 
 ### 6.2 Handling Dynamic Data: JSONB vs EAV
 
@@ -312,13 +316,14 @@ ALTER TABLE patients ADD COLUMN deleted_at TIMESTAMP;
 CREATE INDEX patients_active ON patients (id) WHERE deleted_at IS NULL;
 ```
 
-::: info TRADE-OFFS
-**Preserves history and audit trail** — but every query must filter out deleted rows
-
-**Enables undo and recovery** — but soft-deleted rows accumulate over time
-
-**Foreign keys remain valid** — but it's easy to accidentally include deleted records in aggregates
-:::
+> [!NOTE]
+> **TRADE-OFFS**
+>
+> **Preserves history and audit trail** — but every query must filter out deleted rows
+>
+> **Enables undo and recovery** — but soft-deleted rows accumulate over time
+>
+> **Foreign keys remain valid** — but it's easy to accidentally include deleted records in aggregates
 
 ### 6.4 Pagination Patterns
 
@@ -341,9 +346,10 @@ _Benefit:_ Consistent results under concurrent inserts; scales well.
 </div>
 </div>
 
-::: warning FAILURE SCENARIO
-Using offset pagination on a frequently-updated table → rows shift as records are inserted or deleted, causing rows to appear twice or be skipped.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Using offset pagination on a frequently-updated table → rows shift as records are inserted or deleted, causing rows to appear twice or be skipped.
 
 ## 7. Query Performance
 
@@ -395,10 +401,11 @@ PostgreSQL forks a new OS process for every connection, which consumes significa
 
 To scale read-heavy workloads, you add Read Replicas. The Primary node handles all writes and streams the changes to the Replicas.
 
-::: warning FAILURE SCENARIO
-**Replication Lag:** A user updates their profile (written to Primary) and is redirected to their profile page (read from Replica). Because replication is asynchronous, the Replica hasn't received the update yet, and the user sees their old data.
-_Fix:_ Pin the user's session to the Primary database for a few seconds after a write.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> **Replication Lag:** A user updates their profile (written to Primary) and is redirected to their profile page (read from Replica). Because replication is asynchronous, the Replica hasn't received the update yet, and the user sees their old data.
+> _Fix:_ Pin the user's session to the Primary database for a few seconds after a write.
 
 ### 8.3 Partitioning vs. Sharding
 
@@ -449,9 +456,8 @@ flowchart TD
     S3 --> S4["4. Contract\nRemove old structure"]
 ```
 
-::: warning
-Never remove something the current application depends on in the same deploy that changes the schema.
-:::
+> [!WARNING]
+> Never remove something the current application depends on in the same deploy that changes the schema.
 
 ## 10. Multi-Tenancy
 
@@ -483,18 +489,18 @@ _Best for:_ Few very large tenants, strict data residency.
 </div>
 </div>
 
-::: tip
-Most SaaS products start with row-level isolation. It is the simplest to operate and sufficient for most use cases when properly enforced.
-:::
+> [!TIP]
+> Most SaaS products start with row-level isolation. It is the simplest to operate and sufficient for most use cases when properly enforced.
 
-::: info MULTI-TENANCY VS. SHARDING
-These sound similar but solve different problems:
-
-- **Multi-Tenancy** is a _product/business_ requirement for **logical isolation** (keeping Customer A's data secure from Customer B).
-- **Sharding** is a _performance_ requirement for **physical scaling** (distributing CPU/Disk load across multiple machines).
-
-They overlap in the "Database-per-tenant" model (which achieves both), but you can have multi-tenancy on a single machine, or you can shard a massive single-tenant B2C app (like Twitter).
-:::
+> [!NOTE]
+> **MULTI-TENANCY VS. SHARDING**
+>
+> These sound similar but solve different problems:
+>
+> - **Multi-Tenancy** is a _product/business_ requirement for **logical isolation** (keeping Customer A's data secure from Customer B).
+> - **Sharding** is a _performance_ requirement for **physical scaling** (distributing CPU/Disk load across multiple machines).
+>
+> They overlap in the "Database-per-tenant" model (which achieves both), but you can have multi-tenancy on a single machine, or you can shard a massive single-tenant B2C app (like Twitter).
 
 ### 10.2 Enforcing Row-Level Isolation
 
@@ -580,9 +586,10 @@ _Good fit:_ Global deployments outgrowing a single Postgres node.
 </div>
 </div>
 
-::: info SENIOR IMPLICATION
-Most SaaS products run fine on PostgreSQL + Redis for their entire lifecycle. Reaching for a specialized database is a trade-off: you gain query performance for one pattern and pay with operational complexity and a new consistency model.
-:::
+> [!NOTE]
+> **SENIOR IMPLICATION**
+>
+> Most SaaS products run fine on PostgreSQL + Redis for their entire lifecycle. Reaching for a specialized database is a trade-off: you gain query performance for one pattern and pay with operational complexity and a new consistency model.
 
 ## 12. Test your Knowledge
 

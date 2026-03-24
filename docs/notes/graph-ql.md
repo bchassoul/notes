@@ -4,13 +4,14 @@
 
 GraphQL is a query language and runtime for APIs. The client describes exactly what data it needs, and the server returns exactly that — nothing more, nothing less.
 
-::: tip KEY PRINCIPLES
-
-1. A single endpoint handles all operations
-2. Clients declare their data requirements in a typed query language
-3. The schema is the contract between client and server
-4. Every field in the response was explicitly requested
-   :::
+> [!TIP]
+> **KEY PRINCIPLES**
+>
+>
+> 1. A single endpoint handles all operations
+> 2. Clients declare their data requirements in a typed query language
+> 3. The schema is the contract between client and server
+> 4. Every field in the response was explicitly requested
 
 > The client is in control of the shape of the response. The server is in control of what is allowed.
 
@@ -35,15 +36,16 @@ A client requires multiple round trips to assemble a complete view (e.g., fetch 
 </div>
 </div>
 
-::: info TRADE-OFFS
-**Precise data fetching** — but more complex server implementation
-
-**Single endpoint** — but query complexity can become unbounded
-
-**Strongly typed schema** — but schema design requires upfront thought
-
-**Self-documenting** — but caching is harder than REST
-:::
+> [!NOTE]
+> **TRADE-OFFS**
+>
+> **Precise data fetching** — but more complex server implementation
+>
+> **Single endpoint** — but query complexity can become unbounded
+>
+> **Strongly typed schema** — but schema design requires upfront thought
+>
+> **Self-documenting** — but caching is harder than REST
 
 ### 1.2 Operations
 
@@ -80,9 +82,10 @@ While GraphQL is transport-agnostic, it is almost always served over HTTP. Unlik
 }
 ```
 
-::: warning FAILURE SCENARIO
-Because all requests are `POST` to a single endpoint, standard HTTP tooling (like browser caching, CDN caching, and REST-based API monitoring) does not work out of the box.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Because all requests are `POST` to a single endpoint, standard HTTP tooling (like browser caching, CDN caching, and REST-based API monitoring) does not work out of the box.
 
 ## 2. Schema Design
 
@@ -134,9 +137,10 @@ type Patient {
 }
 ```
 
-::: tip SENIOR IMPLICATION
-Nullable vs non-null is a contract with every client. Making a previously non-null field nullable is a non-breaking change; the reverse is breaking. Over-using non-null leads to null propagation errors that can blank out large parts of a UI.
-:::
+> [!TIP]
+> **SENIOR IMPLICATION**
+>
+> Nullable vs non-null is a contract with every client. Making a previously non-null field nullable is a non-breaking change; the reverse is breaking. Over-using non-null leads to null propagation errors that can blank out large parts of a UI.
 
 ### 2.4 Directives
 
@@ -152,11 +156,12 @@ Directives are annotations that attach metadata or alter the execution behavior 
 - Prefer specific types over generic ones (avoid generic `metadata: JSON` fields)
 - Design for the client's use case, not the server's data model
 
-::: warning FAILURE SCENARIO
-**Mirroring the database exactly**
-
-Forces the client to know about server implementation details. Any database refactor breaks the API contract.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> **Mirroring the database exactly**
+>
+> Forces the client to know about server implementation details. Any database refactor breaks the API contract.
 
 ### 2.6 Schema Evolution & Versioning
 
@@ -236,9 +241,8 @@ flowchart LR
     end
 ```
 
-::: tip
-DataLoader defers individual data requests until the end of the current tick, then batches them into one. It is strictly a **per-request** cache.
-:::
+> [!TIP]
+> DataLoader defers individual data requests until the end of the current tick, then batches them into one. It is strictly a **per-request** cache.
 
 ## 4. Authorization & Security
 
@@ -267,9 +271,10 @@ In a shared processing layer (e.g., `@auth`). Reusable, applied consistently.
 </div>
 </div>
 
-::: warning FAILURE SCENARIO
-Enforcing authorization in the UI only, not the server → any client that bypasses the UI has full API access.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Enforcing authorization in the UI only, not the server → any client that bypasses the UI has full API access.
 
 ### 4.2 Field-Level Authorization
 
@@ -304,9 +309,8 @@ A GraphQL response always returns HTTP 200. Errors are communicated through the 
 }
 ```
 
-::: tip
-A request can partially succeed — some fields resolve, others fail. The client must handle both `data` and `errors` in every response.
-:::
+> [!TIP]
+> A request can partially succeed — some fields resolve, others fail. The client must handle both `data` and `errors` in every response.
 
 ### 5.2 Error vs Null
 
@@ -369,9 +373,10 @@ flowchart LR
 2. The client sends a `GET` request with the hash.
 3. The server looks up the hash. If recognized, it executes the query.
 
-::: tip SENIOR IMPLICATION
-Because the request is now a standard HTTP `GET` with a unique URL, you can cache GraphQL responses at the CDN edge (Cloudflare, Fastly) exactly like REST endpoints.
-:::
+> [!TIP]
+> **SENIOR IMPLICATION**
+>
+> Because the request is now a standard HTTP `GET` with a unique URL, you can cache GraphQL responses at the CDN edge (Cloudflare, Fastly) exactly like REST endpoints.
 
 ## 7. Advanced Patterns
 
@@ -406,9 +411,8 @@ interface Node {
 }
 ```
 
-::: tip
-This allows client-side caches (like Apollo or Relay) to automatically normalize and update data. If a mutation returns a `Node` with an `id` that already exists in the cache, the client knows exactly how to update the UI without manual intervention.
-:::
+> [!TIP]
+> This allows client-side caches (like Apollo or Relay) to automatically normalize and update data. If a mutation returns a `Node` with an `id` that already exists in the cache, the client knows exactly how to update the UI without manual intervention.
 
 ### 7.3 Scaling / Microservices (Federation)
 
@@ -464,15 +468,15 @@ Subscriptions provide real-time updates through a long-lived connection (typical
 1. Client subscribes and opens a persistent connection
 2. When a triggering event occurs on the server, the server pushes the update to all relevant subscribers
 
-::: info TRADE-OFFS
-**True real-time updates** — but stateful connections add infrastructure complexity
+> [!NOTE]
+> **TRADE-OFFS**
+>
+> **True real-time updates** — but stateful connections add infrastructure complexity
+>
+> **Natural fit for live data** — but reconnection, backpressure, and scaling must be designed for
 
-**Natural fit for live data** — but reconnection, backpressure, and scaling must be designed for
-:::
-
-::: warning
-Subscriptions add stateful long-lived connections to your system. Not every real-time update needs a subscription; polling may be simpler and sufficient.
-:::
+> [!WARNING]
+> Subscriptions add stateful long-lived connections to your system. Not every real-time update needs a subscription; polling may be simpler and sufficient.
 
 ## 9. Testing
 

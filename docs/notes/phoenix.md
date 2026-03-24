@@ -9,9 +9,10 @@ Phoenix is not magic. It is a set of well-structured conventions built on top of
 1. **OTP** — Phoenix applications are supervised OTP applications; every request is handled by a process.
 2. **Plug** — Phoenix is a pipeline of composable functions that transform a connection.
 
-::: tip THE PHOENIX PHILOSOPHY
-Phoenix takes the OTP process model and applies it to HTTP and real-time communication. It provides a structured way to turn a web request into an Erlang message, process it, and return a response.
-:::
+> [!TIP]
+> **THE PHOENIX PHILOSOPHY**
+>
+> Phoenix takes the OTP process model and applies it to HTTP and real-time communication. It provides a structured way to turn a web request into an Erlang message, process it, and return a response.
 
 ### 1.1 The Request Lifecycle
 
@@ -28,10 +29,11 @@ flowchart LR
 
 ## 2. Plug — The Foundation
 
-::: info FOR ERLANG DEVELOPERS
-If you are coming from Erlang, you likely know **Cowboy**. Phoenix runs on Cowboy. 
-**Plug** is simply an abstraction layer over Cowboy. Instead of dealing with Cowboy's `Req` object and state, Plug passes an immutable `%Plug.Conn{}` struct through a series of pure functions.
-:::
+> [!NOTE]
+> **FOR ERLANG DEVELOPERS**
+>
+> If you are coming from Erlang, you likely know **Cowboy**. Phoenix runs on Cowboy. 
+> **Plug** is simply an abstraction layer over Cowboy. Instead of dealing with Cowboy's `Req` object and state, Plug passes an immutable `%Plug.Conn{}` struct through a series of pure functions.
 
 ### 2.1 What a Plug Is
 
@@ -92,9 +94,10 @@ pipeline :api do
 end
 ```
 
-::: info SENIOR SIGNAL
-Authentication, content-type negotiation, CSRF protection, and rate limiting all live in pipelines. Pipelines are the right place for cross-cutting concerns, not individual controllers.
-:::
+> [!NOTE]
+> **SENIOR SIGNAL**
+>
+> Authentication, content-type negotiation, CSRF protection, and rate limiting all live in pipelines. Pipelines are the right place for cross-cutting concerns, not individual controllers.
 
 ## 3. Architecture & Contexts
 
@@ -148,9 +151,10 @@ defmodule MyApp.Auth.VerifyToken do
 end
 ```
 
-::: warning HALTING THE PIPELINE
-Calling `halt(conn)` prevents any further plugs from running. Always halt after sending an unauthorized response, otherwise the request continues through the pipeline to the controller.
-:::
+> [!WARNING]
+> **HALTING THE PIPELINE**
+>
+> Calling `halt(conn)` prevents any further plugs from running. Always halt after sending an unauthorized response, otherwise the request continues through the pipeline to the controller.
 
 ### 4.2 Auth and Absinthe (GraphQL)
 
@@ -194,9 +198,10 @@ flowchart TD
     PubSub --> Worker["Background Worker\n(Sends Email)"]
 ```
 
-::: tip WHY THIS MATTERS FOR GRAPHQL
-Absinthe's subscription system uses `Phoenix.PubSub` internally. When a mutation fires a trigger, Absinthe broadcasts through PubSub to all connected WebSocket clients subscribed to that topic.
-:::
+> [!TIP]
+> **WHY THIS MATTERS FOR GRAPHQL**
+>
+> Absinthe's subscription system uses `Phoenix.PubSub` internally. When a mutation fires a trigger, Absinthe broadcasts through PubSub to all connected WebSocket clients subscribed to that topic.
 
 ## 6. Background Jobs (Oban)
 
@@ -234,9 +239,10 @@ Evaluated at startup. This is where you read environment variables (`System.get_
 </div>
 </div>
 
-::: warning SECRETS
-Never put sensitive config (API keys, DB passwords) in `prod.exs` with hardcoded values. Use `runtime.exs` and environment variables.
-:::
+> [!WARNING]
+> **SECRETS**
+>
+> Never put sensitive config (API keys, DB passwords) in `prod.exs` with hardcoded values. Use `runtime.exs` and environment variables.
 
 ## 8. Testing in Phoenix (ExUnit)
 

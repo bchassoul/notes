@@ -29,10 +29,11 @@ Each tenant gets their own isolated schema or physical database.
 </div>
 </div>
 
-::: tip THE DEFAULT CHOICE
-**Use Row-Level Isolation.** It scales best for 95% of SaaS apps. To mitigate the risk of developer error, use ORM/query builder features to automatically inject the `tenant_id` into every query.
-*(Examples: **Elixir/Ecto's `prepare_query`**, **Ruby on Rails' `default_scope`**, **Node/Prisma client extensions**)*
-:::
+> [!TIP]
+> **THE DEFAULT CHOICE**
+>
+> **Use Row-Level Isolation.** It scales best for 95% of SaaS apps. To mitigate the risk of developer error, use ORM/query builder features to automatically inject the `tenant_id` into every query.
+> *(Examples: **Elixir/Ecto's `prepare_query`**, **Ruby on Rails' `default_scope`**, **Node/Prisma client extensions**)*
 
 ### 1.2 What type of Primary Keys should we use?
 
@@ -69,9 +70,10 @@ When a user requests a resource, how do we ensure they are allowed to see it?
 
 If a user tries to perform an invalid action (e.g., booking an already taken slot), how does the client know?
 
-::: warning AVOID TOP-LEVEL HTTP/SYSTEM ERRORS FOR DOMAIN LOGIC
-Do not use generic 500 errors or GraphQL's top-level `errors` array for validation failures. Top-level errors should be reserved for actual system failures (network drops, syntax errors).
-:::
+> [!WARNING]
+> **AVOID TOP-LEVEL HTTP/SYSTEM ERRORS FOR DOMAIN LOGIC**
+>
+> Do not use generic 500 errors or GraphQL's top-level `errors` array for validation failures. Top-level errors should be reserved for actual system failures (network drops, syntax errors).
 
 **Recommendation:** Use **Typed Mutation Payloads** (in GraphQL) or standard **Problem Details JSON** (in REST). The API should return a 200 OK with a payload containing a `success` boolean, the `result` object, and a `userErrors` array.
 *(Examples: **GraphQL union types/interfaces**, **RFC 7807 for REST APIs**)*
@@ -177,9 +179,10 @@ Ephemeral data that only exists in the browser. Use lightweight tools for things
 </div>
 </div>
 
-::: info RULE OF THUMB
-Never copy data from your Server State cache into your local UI State store. Read it directly from the cache using your data-fetching library's hooks.
-:::
+> [!NOTE]
+> **RULE OF THUMB**
+>
+> Never copy data from your Server State cache into your local UI State store. Read it directly from the cache using your data-fetching library's hooks.
 
 ### 5.2 Optimistic Updates
 

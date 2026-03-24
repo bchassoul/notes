@@ -6,13 +6,14 @@ Erlang is not just a language. It runs on the BEAM, a concurrency-oriented runti
 
 `Fault tolerance` | `Concurrency` | `Distribution`
 
-::: tip KEY PRINCIPLES
-
-1. Processes are isolated
-2. Communication is asynchronous
-3. Failure is expected
-4. Recovery is structured
-   :::
+> [!TIP]
+> **KEY PRINCIPLES**
+>
+>
+> 1. Processes are isolated
+> 2. Communication is asynchronous
+> 3. Failure is expected
+> 4. Recovery is structured
 
 ### 1.1 Processes
 
@@ -39,9 +40,8 @@ Erlang is not just a language. It runs on the BEAM, a concurrency-oriented runti
 </div>
 </div>
 
-::: tip
-A BEAM process is not an OS thread or a goroutine. It is a lightweight unit managed entirely by the VM.
-:::
+> [!TIP]
+> A BEAM process is not an OS thread or a goroutine. It is a lightweight unit managed entirely by the VM.
 
 ### 1.2 Message Passing
 
@@ -66,20 +66,22 @@ A BEAM process is not an OS thread or a goroutine. It is a lightweight unit mana
 </div>
 </div>
 
-::: info TRADE-OFFS
+> [!NOTE]
+> **TRADE-OFFS**
+>
+>
+> **Isolation** — message copying overhead
+>
+> **Simplicity** — harder coordination
+>
+> **No locks** — potential mailbox bottlenecks
 
-**Isolation** — message copying overhead
-
-**Simplicity** — harder coordination
-
-**No locks** — potential mailbox bottlenecks
-:::
-
-::: warning FAILURE SCENARIOS
-
-1. Slow consumer → mailbox grows indefinitely → memory pressure and latency spikes
-2. A process receives messages faster than it can handle them
-   :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> 1. Slow consumer → mailbox grows indefinitely → memory pressure and latency spikes
+> 2. A process receives messages faster than it can handle them
 
 ### 1.3 Selective Receive
 
@@ -103,15 +105,17 @@ A BEAM process is not an OS thread or a goroutine. It is a lightweight unit mana
 </div>
 </div>
 
-::: info TRADE-OFFS
+> [!NOTE]
+> **TRADE-OFFS**
+>
+>
+> **Flexibility** — mailbox scanning is O(n), a silent performance cost
 
-**Flexibility** — mailbox scanning is O(n), a silent performance cost
-:::
-
-::: warning FAILURE SCENARIOS
-
-1. Pattern never matches → mailbox grows forever
-   :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> 1. Pattern never matches → mailbox grows forever
 
 ## 2. Concurrency Primitives
 
@@ -163,16 +167,16 @@ A BEAM process is not an OS thread or a goroutine. It is a lightweight unit mana
 </div>
 </div>
 
-::: tip
-Links are about failure propagation, not ordinary communication.
-:::
+> [!TIP]
+> Links are about failure propagation, not ordinary communication.
 
-::: info TRADE-OFFS
-
-**Link** — crash together
-
-**Monitor** — observe only
-:::
+> [!NOTE]
+> **TRADE-OFFS**
+>
+>
+> **Link** — crash together
+>
+> **Monitor** — observe only
 
 ### 2.2 Exit Signals
 
@@ -197,10 +201,11 @@ flowchart LR
     end
 ```
 
-::: warning FAILURE SCENARIOS
-
-1. Unexpected exit propagates across linked processes → cascading crash
-   :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> 1. Unexpected exit propagates across linked processes → cascading crash
 
 ## 3. Error Handling Philosophy
 
@@ -208,12 +213,11 @@ flowchart LR
 
 Error handling in OTP is architectural, not just local.
 
-::: tip
-
-Do not defensively handle every internal error
-
-Fail fast and let supervision handle recovery
-:::
+> [!TIP]
+>
+> Do not defensively handle every internal error
+>
+> Fail fast and let supervision handle recovery
 
 <div class="cols-2">
 <div class="col">
@@ -236,11 +240,12 @@ Fail fast and let supervision handle recovery
 </div>
 </div>
 
-::: info TRADE-OFFS
-**Simpler code** — requires strong supervision design
-
-**Predictable recovery** — needs discipline
-:::
+> [!NOTE]
+> **TRADE-OFFS**
+>
+> **Simpler code** — requires strong supervision design
+>
+> **Predictable recovery** — needs discipline
 
 ### 3.2 What Actually Rolls Back
 
@@ -266,9 +271,8 @@ Fail fast and let supervision handle recovery
 </div>
 </div>
 
-::: tip
-A process crash discards process-local state, not every side effect in the world. OTP protects the server's state transition, but not arbitrary side effects performed before a crash.
-:::
+> [!TIP]
+> A process crash discards process-local state, not every side effect in the world. OTP protects the server's state transition, but not arbitrary side effects performed before a crash.
 
 ## 4. OTP Abstractions
 
@@ -301,9 +305,8 @@ OTP is not just a convenience layer for avoiding handwritten process loops.
 </div>
 </div>
 
-::: tip
-OTP turns Erlang's process primitives into a disciplined system architecture. It gives you a shared model for how processes behave, fail, recover, start, stop, and evolve in production.
-:::
+> [!TIP]
+> OTP turns Erlang's process primitives into a disciplined system architecture. It gives you a shared model for how processes behave, fail, recover, start, stop, and evolve in production.
 
 ### 4.2 The road to the generic server
 
@@ -427,9 +430,8 @@ Now that we understand why `gen_server` exists, here is how to use it.
 
 A good `gen_server` often owns state and orchestration, not the full duration of the work itself.
 
-::: tip
-Protect state in the server. Push expensive work out to workers, tasks, or other processes. Design explicit backpressure rather than letting the mailbox grow silently.
-:::
+> [!TIP]
+> Protect state in the server. Push expensive work out to workers, tasks, or other processes. Design explicit backpressure rather than letting the mailbox grow silently.
 
 A `gen_server` handles one message at a time.
 
@@ -499,13 +501,11 @@ flowchart TD
 | `terminate/2`       | Cleanup on shutdown                                    |
 | `code_change/3`     | Transform state during upgrade                         |
 
-::: info
-The callback module is pure sequential code. Concurrency, fault tolerance, and lifecycle are handled by the generic layer — not by you.
-:::
+> [!NOTE]
+> The callback module is pure sequential code. Concurrency, fault tolerance, and lifecycle are handled by the generic layer — not by you.
 
-::: tip
-A callback does more than return a value — it tells the runtime what happens next: reply and continue, continue without replying, stop, or set a timeout.
-:::
+> [!TIP]
+> A callback does more than return a value — it tells the runtime what happens next: reply and continue, continue without replying, stop, or set a timeout.
 
 ##### `call` vs `cast`
 
@@ -530,15 +530,15 @@ A callback does more than return a value — it tells the runtime what happens n
 </div>
 </div>
 
-::: info TRADE-OFFS
-**`call`** — explicit coordination, but blocking with timeout and deadlock risk
+> [!NOTE]
+> **TRADE-OFFS**
+>
+> **`call`** — explicit coordination, but blocking with timeout and deadlock risk
+>
+> **`cast`** — decoupling, but lost visibility and mailbox growth risk
 
-**`cast`** — decoupling, but lost visibility and mailbox growth risk
-:::
-
-::: tip
-Use `call` when correctness depends on knowing the outcome now. Do not use `cast` to hide overload or avoid thinking about backpressure.
-:::
+> [!TIP]
+> Use `call` when correctness depends on knowing the outcome now. Do not use `cast` to hide overload or avoid thinking about backpressure.
 
 #### Design mistakes
 
@@ -549,9 +549,10 @@ Use `call` when correctness depends on knowing the outcome now. Do not use `cast
 - Ignoring mailbox growth
 - Using `cast` where correctness requires acknowledgment
 
-::: tip SUMMARY
-`gen_server` is the result of separating the nonfunctional parts of a server (concurrency, fault tolerance, lifecycle, hot code upgrade) from the functional parts (your domain logic). The behavior solves the nonfunctional parts once; the callback module solves the functional parts for every problem. Once you understand this split, you can understand — and build — any OTP behavior.
-:::
+> [!TIP]
+> **SUMMARY**
+>
+> `gen_server` is the result of separating the nonfunctional parts of a server (concurrency, fault tolerance, lifecycle, hot code upgrade) from the functional parts (your domain logic). The behavior solves the nonfunctional parts once; the callback module solves the functional parts for every problem. Once you understand this split, you can understand — and build — any OTP behavior.
 
 ### 4.4 Other Generic behaviors
 
@@ -591,9 +592,8 @@ For simple state machines that don't need these, `gen_server` works fine (~2 µs
 </div>
 </div>
 
-::: info
-Alongside the state name, `gen_statem` keeps a separate **server data** term. In `gen_server`, state is just data. In `gen_statem`, the state name is a first-class concept, each state is a function, and illegal transitions become pattern-match errors rather than silent conditional bugs.
-:::
+> [!NOTE]
+> Alongside the state name, `gen_statem` keeps a separate **server data** term. In `gen_server`, state is just data. In `gen_statem`, the state name is a first-class concept, each state is a function, and illegal transitions become pattern-match errors rather than silent conditional bugs.
 
 #### The `gen_event` Behaviour
 
@@ -627,9 +627,8 @@ All handlers run in the same process with no isolation between them. A crashing 
 </div>
 </div>
 
-::: tip
-`gen_event` trades isolation for simplicity. A crashing handler can take down the entire manager and all other handlers with it.
-:::
+> [!TIP]
+> `gen_event` trades isolation for simplicity. A crashing handler can take down the entire manager and all other handlers with it.
 
 #### Choosing the right behaviour
 
@@ -668,13 +667,12 @@ Which child processes to start and monitor is specified by a list of child speci
 
 > A supervision tree defines failure domains.
 
-::: tip
-Tree structure is not cosmetic
-
-It determines which failures stay local and which failures cascade
-
-Good supervision design is part of system correctness
-:::
+> [!TIP]
+> Tree structure is not cosmetic
+>
+> It determines which failures stay local and which failures cascade
+>
+> Good supervision design is part of system correctness
 
 ### 5.1 Restart Strategies
 
@@ -708,11 +706,12 @@ flowchart LR
     end
 ```
 
-::: warning FAILURE SCENARIOS
-
-1. Wrong restart strategy → cascading restarts
-2. Restart storm → system thrashing
-   :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> 1. Wrong restart strategy → cascading restarts
+> 2. Restart storm → system thrashing
 
 ### 5.2 Restart Intensity
 
@@ -722,11 +721,10 @@ flowchart LR
 
 > Supervision is controlled recovery, not infinite retry.
 
-::: info
-Repeated failure is a system-design signal
-
-If a child instantly crashes after every restart, the right answer is usually redesign, not "restart harder"
-:::
+> [!NOTE]
+> Repeated failure is a system-design signal
+>
+> If a child instantly crashes after every restart, the right answer is usually redesign, not "restart harder"
 
 ### 5.3 Child Specs and Restart Types
 
@@ -828,9 +826,8 @@ flowchart TD
 </div>
 </div>
 
-::: tip
-Supervision trees are architectural diagrams for failure behavior.
-:::
+> [!TIP]
+> Supervision trees are architectural diagrams for failure behavior.
 
 ### 5.6 Common Supervision Mistakes
 
@@ -841,9 +838,8 @@ Supervision trees are architectural diagrams for failure behavior.
 - Ignoring restart storms
 - Putting business logic into supervisors
 
-::: info
-Supervisors should decide recovery, not perform application work.
-:::
+> [!NOTE]
+> Supervisors should decide recovery, not perform application work.
 
 ### 5.7 Practical Design Rule
 
@@ -924,9 +920,8 @@ The default. State lives inside the process, updated through immutable transitio
 
 `set` is the right default. `ordered_set` enables ordered iteration at the cost of a tree structure internally. `bag` and `duplicate_bag` are niche — choose them only when multi-value semantics are explicitly needed.
 
-::: warning
-Choosing the wrong table type is a silent correctness bug. Inserting into a `set` silently replaces the existing value for that key. The right question is not "is ETS faster?" but "who owns correctness?"
-:::
+> [!WARNING]
+> Choosing the wrong table type is a silent correctness bug. Inserting into a `set` silently replaces the existing value for that key. The right question is not "is ETS faster?" but "who owns correctness?"
 
 ### 6.3 Mnesia
 
@@ -981,17 +976,19 @@ Values stored in `persistent_term` are stored in a global area that all processe
 
 Every write to `persistent_term` triggers a global garbage collection pass across all processes. This is intentional — the runtime must invalidate cached references to the old value. This makes `persistent_term` unsuitable for data that changes under load.
 
-::: tip GOOD USE CASES
+> [!TIP]
+> **GOOD USE CASES**
+>
+>
+> 1. Application configuration loaded at startup
+> 2. Compiled regular expressions or parsed schemas
+> 3. Feature flags that change rarely
+> 4. Large shared data structures that many processes read but almost never change
 
-1. Application configuration loaded at startup
-2. Compiled regular expressions or parsed schemas
-3. Feature flags that change rarely
-4. Large shared data structures that many processes read but almost never change
-   :::
-
-::: warning FAILURE SCENARIO
-Using `persistent_term` for data that updates frequently → GC storms across all scheduler threads.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Using `persistent_term` for data that updates frequently → GC storms across all scheduler threads.
 
 > `persistent_term` is not a faster ETS. It is a different contract: almost-free reads in exchange for very expensive writes.
 
@@ -1023,13 +1020,14 @@ flowchart TD
 
 > State design is really ownership design.
 
-::: warning COMMON MISTAKES
-
-- Using ETS with unclear ownership rules
-- Treating cache state as authoritative durable state
-- Ignoring rebuild strategy after process or node failure
-- Storing too much mutable coordination state in many places
-  :::
+> [!WARNING]
+> **COMMON MISTAKES**
+>
+>
+> - Using ETS with unclear ownership rules
+> - Treating cache state as authoritative durable state
+> - Ignoring rebuild strategy after process or node failure
+> - Storing too much mutable coordination state in many places
 
 ## 7. Distribution
 
@@ -1105,14 +1103,15 @@ Nodes authenticate with a shared **cookie**. Cookie mismatch = no connection. A 
 - `monitor_node/2` — observe node up/down events
 - `erlang:disconnect_node(Node)` — force disconnection
 
-::: warning FAILURE SCENARIOS
-
-- Netsplit → nodes disconnect, remote processes appear dead
-- Partial failure → node alive but unreachable
-- Cookie or name mismatch → nodes never connect
-- Short-vs-long name mismatch → nodes never connect
-- Transitive auto-connect → unexpected cluster links appear
-  :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> - Netsplit → nodes disconnect, remote processes appear dead
+> - Partial failure → node alive but unreachable
+> - Cookie or name mismatch → nodes never connect
+> - Short-vs-long name mismatch → nodes never connect
+> - Transitive auto-connect → unexpected cluster links appear
 
 ### 7.2 Socket-based Distribution
 
@@ -1173,11 +1172,12 @@ flowchart LR
 
 When a large binary is sent between processes, only a reference is copied — efficient for large payloads, but the binary stays alive until all refs are GC'd. If a high-throughput process accumulates refs faster than GC runs, the shared heap grows unbounded. **Memory pressure appears as latency spikes before any obvious crash.**
 
-::: warning FAILURE SCENARIOS
-
-- Blocking NIF or CPU-saturating work → latency spikes across unrelated processes
-- High-throughput process accumulating large binary refs → shared heap grows, GC never reclaims
-  :::
+> [!WARNING]
+> **FAILURE SCENARIOS**
+>
+>
+> - Blocking NIF or CPU-saturating work → latency spikes across unrelated processes
+> - High-throughput process accumulating large binary refs → shared heap grows, GC never reclaims
 
 ### 8.2 Bottlenecks and Backpressure
 
@@ -1253,9 +1253,8 @@ Extract pure logic out of process callbacks and test it separately. Keep process
 - Deferred replies — process accepts request, does work, replies correctly later
 - After crash and restart — state is rebuilt from scratch, no partial state leaks
 
-::: warning
-Testing only internal state and ignoring mailbox, reply, and restart behavior is the most common `gen_server` test gap.
-:::
+> [!WARNING]
+> Testing only internal state and ignoring mailbox, reply, and restart behavior is the most common `gen_server` test gap.
 
 #### `gen_statem`
 
@@ -1309,9 +1308,8 @@ erlang:trace(Pid, true, [send, 'receive', call])
 erlang:trace_pattern({Mod, Fun, Arity}, true, [local])
 ```
 
-::: warning
-Broad tracing on a busy system adds overhead. Always scope by pid or module, and set a time bound.
-:::
+> [!WARNING]
+> Broad tracing on a busy system adds overhead. Always scope by pid or module, and set a time bound.
 
 #### `:recon_trace` — production-safe tracing
 

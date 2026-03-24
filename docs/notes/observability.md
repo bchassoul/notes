@@ -6,9 +6,10 @@
 
 Observability is the ability to understand what your system is doing from the outside, without modifying it.
 
-::: tip KEY PRINCIPLES
-You cannot debug a system you cannot observe. Observability is not a feature you add later — it is a design decision you make upfront.
-:::
+> [!TIP]
+> **KEY PRINCIPLES**
+>
+> You cannot debug a system you cannot observe. Observability is not a feature you add later — it is a design decision you make upfront.
 
 The three pillars are complementary. Each answers a different question:
 
@@ -55,9 +56,10 @@ Plain text logs are hard to query and analyze at scale. Structured logging emits
 }
 ```
 
-::: info SENIOR IMPLICATION
-A structured log entry is a queryable event, not a message for humans to read. Log aggregation tools (Datadog, Loki, CloudWatch) can filter and query on any field, making queries like "Show me all errors for patient abc-123" trivial. Unstructured logs require brittle regex parsing.
-:::
+> [!NOTE]
+> **SENIOR IMPLICATION**
+>
+> A structured log entry is a queryable event, not a message for humans to read. Log aggregation tools (Datadog, Loki, CloudWatch) can filter and query on any field, making queries like "Show me all errors for patient abc-123" trivial. Unstructured logs require brittle regex parsing.
 
 ### 2.2 Log Levels
 
@@ -86,9 +88,10 @@ Something failed and requires attention.
 </div>
 </div>
 
-::: warning FAILURE SCENARIO
-Over-logging at `error` creates alert fatigue; under-logging creates blind spots. Log at `info` for significant business events, not every function call. Log at `error` only for things that actually require action.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> Over-logging at `error` creates alert fatigue; under-logging creates blind spots. Log at `info` for significant business events, not every function call. Log at `error` only for things that actually require action.
 
 ### 2.3 Correlation IDs / Request IDs
 
@@ -165,9 +168,8 @@ flowchart LR
     Col -->|Exports| DD["Datadog"]
 ```
 
-::: tip
-OTel is the USB standard for observability. Instrument once, plug into any backend. Before OTel, every observability vendor had its own SDK.
-:::
+> [!TIP]
+> OTel is the USB standard for observability. Instrument once, plug into any backend. Before OTel, every observability vendor had its own SDK.
 
 ### 4.3 Honeycomb
 
@@ -219,10 +221,11 @@ All-in-one APM with strong Elixir/Phoenix support. Single tool for errors, perfo
 
 ### 6.1 What to Alert On
 
-::: warning FAILURE SCENARIO
-**Alerting on Causes instead of Symptoms**
-Cause-based alerts generate noise. Symptom-based alerts tell you something users are actually experiencing.
-:::
+> [!WARNING]
+> **FAILURE SCENARIO**
+>
+> **Alerting on Causes instead of Symptoms**
+> Cause-based alerts generate noise. Symptom-based alerts tell you something users are actually experiencing.
 
 <div class="cols-2">
 <div class="col">
@@ -252,9 +255,10 @@ _Example:_ `99.9% of requests respond in < 200ms over a 30-day window.`
 
 **Error Budget:** The gap between 100% and the SLO is the error budget — the amount of unreliability you are allowed before violating the SLO.
 
-::: tip SENIOR IMPLICATION
-An SLO turns reliability into a concrete, measurable goal. An error budget makes the trade-off between feature velocity and reliability explicit. When the budget is spent, feature work stops and reliability work begins.
-:::
+> [!TIP]
+> **SENIOR IMPLICATION**
+>
+> An SLO turns reliability into a concrete, measurable goal. An error budget makes the trade-off between feature velocity and reliability explicit. When the budget is spent, feature work stops and reliability work begins.
 
 ## 7. Test your Knowledge
 
