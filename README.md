@@ -1,4 +1,4 @@
-# Senior Engineering Study Guides & Architecture Notes
+# Study Guides & Architecture Notes
 
 Comprehensive mental models, system design patterns, and deep dives for modern full-stack development.
 
