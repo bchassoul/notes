@@ -13,13 +13,17 @@ hero:
       link: https://github.com/bchassoul/notes
 
 features:
-  - title: 🏗️ System Design
-    details: SaaS architecture guidelines, multi-tenancy, and scaling strategies.
-    link: /notes/system-design
-    linkText: Read Guide
   - title: ⚡ Erlang / OTP
     details: The Actor model, gen_server, supervision trees, and fault tolerance.
     link: /notes/otp
+    linkText: Read Guide
+  - title: 💧 Elixir
+    details: Syntax, idioms, pattern matching, and functional programming patterns.
+    link: /notes/elixir
+    linkText: Read Guide
+  - title: 🏗️ System Design
+    details: SaaS architecture guidelines, multi-tenancy, and scaling strategies.
+    link: /notes/system-design
     linkText: Read Guide
   - title: 🔥 Phoenix Framework
     details: Plugs, Contexts, Channels, Oban, and the request lifecycle.
@@ -40,6 +44,18 @@ features:
   - title: 🔭 Observability
     details: Logs, metrics, traces, OpenTelemetry, and structured logging.
     link: /notes/observability
+    linkText: Read Guide
+  - title: ⚙️ GenStage, Broadway & AI
+    details: Stream processing, LLM/ML integration, and production AI pipeline patterns.
+    link: /notes/genstage-broadway-ai
+    linkText: Read Guide
+  - title: 🧠 Semantic Search & Vectors
+    details: Embeddings, pgvector, RAG pipelines, and vector search at scale.
+    link: /notes/semantic-search-vectors
+    linkText: Read Guide
+  - title: 🎯 Behavioral Interview
+    details: STAR method frameworks, interview narratives, and questions to ask.
+    link: /notes/behavioral-interview
     linkText: Read Guide
 ---
 

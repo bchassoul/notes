@@ -783,7 +783,7 @@ Apollo Client stores query results in a normalized in-memory cache. Each object 
 
 > The Apollo cache is a local mirror of the parts of the server graph your UI has queried. Keeping it consistent after writes is your responsibility.
 
-#### Senior-level implication
+#### Advanced implication
 
 - Cache normalization only works if your types have an `id` field that Apollo can use as a key
 - Types without `id` are stored by query path and cannot be normalized — updates to them must be handled manually
@@ -847,7 +847,7 @@ if (error) {
 }
 ```
 
-#### Senior-level implication
+#### Advanced implication
 
 - A non-null `error` does not mean `data` is null — always check both
 - Network errors and GraphQL errors have different shapes and often need different handling

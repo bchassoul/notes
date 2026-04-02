@@ -4,33 +4,48 @@ Comprehensive mental models, system design patterns, and deep dives for modern f
 
 ## 📚 The Guides
 
-### [🏗️ System Design](docs/notes/system-design.md)
+### Foundations
 
-SaaS architecture guidelines, multi-tenancy, and scaling strategies.
-
-### [⚡ Erlang / OTP](docs/notes/otp.md)
-
+#### [⚡ Erlang / OTP](docs/notes/otp.md)
 The Actor model, gen_server, supervision trees, and fault tolerance.
 
-### [🔥 Phoenix Framework](docs/notes/phoenix.md)
+#### [💧 Elixir](docs/notes/elixir.md)
+Syntax, idioms, pattern matching, and functional programming patterns.
 
+#### [🏗️ System Design](docs/notes/system-design.md)
+SaaS architecture guidelines, multi-tenancy, and scaling strategies.
+
+### Web Layer
+
+#### [🔥 Phoenix Framework](docs/notes/phoenix.md)
 Plugs, Contexts, Channels, Oban, and the request lifecycle.
 
-### [⚛️ React & TypeScript](docs/notes/react-typescript.md)
-
+#### [⚛️ React & TypeScript](docs/notes/react-typescript.md)
 Rendering mental models, Server Components, and advanced TS patterns.
 
-### [🕸️ GraphQL](docs/notes/graph-ql.md)
-
+#### [🕸️ GraphQL](docs/notes/graph-ql.md)
 Schema design, mutation payloads, Dataloader, and Absinthe.
 
-### [🗄️ Relational Databases](docs/notes/relational-databases.md)
+### Data & Infrastructure
 
+#### [🗄️ Relational Databases](docs/notes/relational-databases.md)
 PostgreSQL internals, MVCC, advanced indexing, and query optimization.
 
-### [🔭 Observability](docs/notes/observability.md)
-
+#### [🔭 Observability](docs/notes/observability.md)
 Logs, metrics, traces, OpenTelemetry, and structured logging.
+
+### AI Pipelines
+
+#### [⚙️ GenStage, Broadway & AI](docs/notes/genstage-broadway-ai.md)
+Stream processing, LLM/ML integration, and production AI pipeline patterns.
+
+#### [🧠 Semantic Search & Vectors](docs/notes/semantic-search-vectors.md)
+Embeddings, pgvector, RAG pipelines, and vector search at scale.
+
+### Interview Prep
+
+#### [🎯 Behavioral Interview](docs/notes/behavioral-interview.md)
+STAR method frameworks, interview narratives, and questions to ask.
 
 ---
 

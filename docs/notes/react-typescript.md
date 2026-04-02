@@ -151,9 +151,9 @@ When multiple components need to work together implicitly (like a `<select>` and
 A JavaScript error in a part of the UI shouldn't break the whole app. Error boundaries catch errors anywhere in their child component tree and display a fallback UI.
 
 > [!NOTE]
-> **SENIOR SIGNAL**
+> **ADVANCED CONCEPT**
 >
-> Currently, Error Boundaries must be written as Class Components. A senior engineer knows to place them strategically (e.g., around route transitions or complex widgets) so that a failure in a minor widget doesn't crash the entire page to a white screen.
+> Currently, Error Boundaries must be written as Class Components. Place them strategically (e.g., around route transitions or complex widgets) so that a failure in a minor widget doesn't crash the entire page to a white screen.
 
 ### 3.4 Lifting State Up
 
@@ -165,7 +165,7 @@ When two components need to share state, move the state to their closest common 
 
 Large applications should split code so users do not download everything upfront (`React.lazy` + `Suspense`).
 
-**Senior Signal:** Route-level code splitting is the highest-value, lowest-effort splitting strategy. Component-level splitting is only worth it for rarely-used heavy widgets (rich text editors, charts).
+**Advanced concept:** Route-level code splitting is the highest-value, lowest-effort splitting strategy. Component-level splitting is only worth it for rarely-used heavy widgets (rich text editors, charts).
 
 ---
 
@@ -250,7 +250,7 @@ function useFetch<T>(url: string): { data: T | null; loading: boolean } { ... }
 
 ### 5.4 Advanced Types: Mapped Types & `keyof`
 
-A senior engineer uses TypeScript to prevent repeating themselves. If you have a `User` type, you can derive new types from it automatically.
+A powerful TypeScript pattern is to avoid repeating yourself. If you have a `User` type, you can derive new types from it automatically.
 
 ```typescript
 type User = { id: string; name: string; email: string };
