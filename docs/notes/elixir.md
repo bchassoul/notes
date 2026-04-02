@@ -6,8 +6,8 @@ Elixir is not a new runtime. It is a language, standard library, and ecosystem l
 
 > [!TIP]
 > **SOURCE OF TRUTH**
-> 
-> This document focuses strictly on Elixir syntax, idioms, and abstractions. 
+>
+> This document focuses strictly on Elixir syntax, idioms, and abstractions.
 > For the conceptual foundation of the BEAM—including processes, message passing, failure domains, and OTP philosophy—refer to the [Erlang/OTP document](otp.md).
 
 <div class="cols-2">
@@ -69,7 +69,7 @@ This is the most common friction point for Erlang developers moving to Elixir.
 
 > [!WARNING]
 > **COMMON MISTAKE**
-> 
+>
 > Passing an Elixir string (`"hello"`) to an Erlang function that expects a charlist (`'hello'`) will fail. Use `String.to_charlist/1` when crossing the boundary to older Erlang APIs.
 
 ### 1.2 Keyword Lists
@@ -107,7 +107,7 @@ Like Erlang, Elixir uses pattern matching at the function head. This replaces de
 defmodule User do
   # Matches only when role is :admin
   def process(%{role: :admin} = user), do: grant_access(user)
-  
+
   # Matches any other map
   def process(%{}), do: deny_access()
 end
@@ -123,7 +123,7 @@ def fetch(url, retries \\ 3)
 
 > [!NOTE]
 > **TRADE-OFFS**
-> 
+>
 > Default arguments are convenient but can obscure arity. If a function has complex matching across multiple clauses, define a separate function head for the defaults to keep the logic clear.
 
 ### 2.3 Naming Conventions
@@ -183,6 +183,25 @@ else
 end
 ```
 
+```mermaid
+flowchart TD
+    START(["with ..."])
+
+    C1{"{:ok, user}\n<- fetch_user(id)\nmatches?"}
+    C2{"{:ok, profile}\n<- fetch_profile(user)\nmatches?"}
+    OK["do block\n{:ok, %{user | profile: profile}}"]
+    ERR["else block\n{:error, reason}"]
+
+    START --> C1
+    C1 -->|"yes"| C2
+    C1 -->|"no — mismatch\nshort-circuits"| ERR
+    C2 -->|"yes"| OK
+    C2 -->|"no — mismatch\nshort-circuits"| ERR
+
+```
+
+> The happy path runs straight down. The first clause that does not match jumps immediately to `else` — no nested `case` required.
+
 ### 3.2 The Pipe Operator (`|>`)
 
 The pipe operator passes the result of the left expression as the **first argument** to the right function.
@@ -200,10 +219,11 @@ id
 
 > [!TIP]
 > **DESIGN GUIDELINE: When to use pipes**
-> 
+>
 > Use pipes for linear data transformations where data flows cleanly from one step to the next.
-> 
+>
 > **When NOT to use pipes:**
+>
 > - When a step can fail and you need to handle the error (use `with` instead).
 > - When you need the intermediate value multiple times.
 > - When the pipeline becomes so long it obscures the business logic. Readability > cleverness.
@@ -235,17 +255,39 @@ Elixir standardizes data transformation through the `Enum` and `Stream` modules.
 </div>
 </div>
 
+```mermaid
+flowchart RL
+    subgraph Eager["Enum (Eager) — 3 full intermediate lists allocated"]
+        direction LR
+        L1["[1..100_000]"] -->|"Enum.map"| L2["[mapped list\n100k items]"]
+        L2 -->|"Enum.filter"| L3["[filtered list\n~50k items]"]
+        L3 -->|"Enum.take(5)"| R1["[5 items]"]
+    end
+
+```
+
+```mermaid
+flowchart RL
+    subgraph Lazy["Stream (Lazy) — 1 element at a time, no intermediate lists"]
+        direction LR
+        S1["[1..100_000]"] -->|"Stream.map\n(recipe)"| S2["Stream\n(not evaluated)"]
+        S2 -->|"Stream.filter\n(recipe)"| S3["Stream\n(not evaluated)"]
+        S3 -->|"Enum.take(5)\n(forces evaluation\nstops at 5)"| R2["[5 items]"]
+    end
+```
+
 > [!WARNING]
 > **FAILURE SCENARIOS: The hidden cost of pipes**
-> 
+>
 > ```elixir
 > list
 > |> Enum.map(&parse/1)
 > |> Enum.filter(&valid?/1)
 > |> Enum.take(5)
 > ```
-> If `list` has 100,000 items, this code creates a 100,000-item list in memory for `map`, then another for `filter`, before finally taking 5. 
-> 
+>
+> If `list` has 100,000 items, this code creates a 100,000-item list in memory for `map`, then another for `filter`, before finally taking 5.
+>
 > **Fix:** Replace `Enum` with `Stream` for the intermediate steps to avoid allocating massive intermediate lists.
 
 ### 4.2 Pipelines vs Intermediate Variables
@@ -260,12 +302,12 @@ Elixir uses the exact same OTP behaviours as Erlang, but provides syntactic suga
 
 > [!TIP]
 > **SOURCE OF TRUTH**
-> 
+>
 > The underlying mechanics of `gen_server` and `supervisor`—including mailboxes, synchronous vs asynchronous calls, failure domains, and restart strategies—are identical to Erlang. Refer to the [Erlang document](otp.md) for the conceptual foundation.
 
 ### 5.1 GenServer in Elixir
 
-In Elixir, you define a GenServer by invoking `use GenServer`. 
+In Elixir, you define a GenServer by invoking `use GenServer`.
 
 By convention, Elixir developers place both the **Client API** and the **Server Callbacks** in the same module. This encapsulates the process boundary entirely within the module.
 
@@ -298,7 +340,7 @@ end
 
 > [!NOTE]
 > **The `@impl true` attribute**
-> 
+>
 > Always use `@impl true` before a callback function. It tells the compiler to verify that the function actually implements a behaviour callback. If you misspell `handle_call` as `handel_call`, the compiler will catch it.
 
 ### 5.2 Supervisor in Elixir
@@ -361,25 +403,22 @@ Elixir introduces `Task` and `Agent` as convenience layers over plain processes 
 ```mermaid
 flowchart TD
     START(["I need a process"])
-    
+
     Q1{"Do I just need to run\nasync compute?"}
     Q1 -->|"yes"| TASK["Task\n(Compute)"]
     Q1 -->|"no"| Q2{"Do I just need to\nhold simple state?"}
-    
+
     Q2 -->|"yes"| AGENT["Agent\n(State)"]
     Q2 -->|"no"| Q3{"Do I need lifecycle,\ntimeouts, or complex state?"}
-    
+
     Q3 -->|"yes"| GS["GenServer\n(State + Compute + Lifecycle)"]
-    
-    style TASK fill:#e6f4ea,stroke:#4caf50,color:#000
-    style AGENT fill:#e6f4ea,stroke:#4caf50,color:#000
-    style GS fill:#e6f4ea,stroke:#4caf50,color:#000
+
 ```
 
 > [!WARNING]
 > **COMMON MISTAKE**
-> 
-> Do not use `Agent` if the state updates require heavy computation. The function passed to `Agent.update/2` runs *inside* the Agent process, blocking it. If you need to compute heavily before updating state, compute it in the caller, then update the Agent.
+>
+> Do not use `Agent` if the state updates require heavy computation. The function passed to `Agent.update/2` runs _inside_ the Agent process, blocking it. If you need to compute heavily before updating state, compute it in the caller, then update the Agent.
 
 ## 6. Elixir Abstractions
 
@@ -415,9 +454,27 @@ defimpl Serializable, for: User do
 end
 ```
 
+```mermaid
+flowchart TD
+    CALL["Serializable.to_json(data)"]
+    DISPATCH{"dispatch on\ndata type"}
+
+    ImplUser["defimpl Serializable,\nfor: User\n→ encode user fields"]
+    ImplProduct["defimpl Serializable,\nfor: Product\n→ encode product fields"]
+    ImplMap["defimpl Serializable,\nfor: Map\n→ encode map keys"]
+    ImplAny["defimpl Serializable,\nfor: Any\n→ fallback"]
+
+    CALL --> DISPATCH
+    DISPATCH -->|"%User{}"| ImplUser
+    DISPATCH -->|"%Product{}"| ImplProduct
+    DISPATCH -->|"%{} map"| ImplMap
+    DISPATCH -->|"anything else"| ImplAny
+
+```
+
 > [!NOTE]
 > **TRADE-OFFS**
-> 
+>
 > Protocols dispatch based on the data type of the first argument. They are slightly slower than direct function calls but provide excellent decoupling.
 
 ### 6.3 Behaviours in Elixir syntax
@@ -431,7 +488,7 @@ end
 
 defmodule JSONParser do
   @behaviour Parser
-  
+
   @impl true
   def parse(string), do: # ...
 end
@@ -445,10 +502,10 @@ Many Elixir features (like `if`, `def`, `case`) are actually macros. Libraries l
 
 > [!WARNING]
 > **DESIGN GUIDELINE: Macros**
-> 
+>
 > 1. Rule 1 of macros: **Don't write macros.**
 > 2. Rule 2 of macros: If you must write a macro, do as little as possible in the macro and delegate to a normal function.
-> 
+>
 > Macros hide complexity, make debugging harder, and increase compile times. Plain functions are always preferred for business logic.
 
 ## 7. Tooling and Project Structure
@@ -515,12 +572,12 @@ Erlang modules are represented as atoms in Elixir.
 
 > [!TIP]
 > **SOURCE OF TRUTH**
-> 
+>
 > For deep performance considerations regarding the BEAM scheduler, memory model, and garbage collection, refer to the [Erlang document](otp.md).
 
 ### 9.1 Pipeline Allocation
 
-Because Elixir data structures are immutable, every step in a pipeline `|>` creates a new copy of the data. 
+Because Elixir data structures are immutable, every step in a pipeline `|>` creates a new copy of the data.
 
 ```elixir
 # Bad: Allocates 3 intermediate lists
@@ -561,17 +618,17 @@ Elixir provides many tools, but idiomatic Elixir favors simplicity and explicitn
 
 ## 12. Mapping Erlang to Elixir
 
-| Erlang Concept / Tool | Elixir Equivalent | Notes |
-| :--- | :--- | :--- |
-| `gen_server` | `GenServer` | Same behaviour, Elixir syntax. |
-| `supervisor` | `Supervisor` | Elixir simplifies child specs. |
-| `simple_one_for_one` | `DynamicSupervisor` | Elixir provides a dedicated module. |
-| `spawn` / `spawn_link` | `Task` | `Task` is idiomatic for async compute. |
-| Records (`#user{}`) | Structs (`%User{}`) | Structs are maps; records are tuples. |
-| Parse Transforms | Macros | Macros manipulate AST directly. |
-| `global` / `pg` | `Registry` / `pg` | Elixir provides `Registry` for local/pubsub. |
-| `rebar3` | `mix` | Mix is the standard build tool. |
-| `ets` | `ETS` / `Agent` | `Agent` for simple state, `ETS` for concurrent reads. |
+| Erlang Concept / Tool  | Elixir Equivalent   | Notes                                                 |
+| :--------------------- | :------------------ | :---------------------------------------------------- |
+| `gen_server`           | `GenServer`         | Same behaviour, Elixir syntax.                        |
+| `supervisor`           | `Supervisor`        | Elixir simplifies child specs.                        |
+| `simple_one_for_one`   | `DynamicSupervisor` | Elixir provides a dedicated module.                   |
+| `spawn` / `spawn_link` | `Task`              | `Task` is idiomatic for async compute.                |
+| Records (`#user{}`)    | Structs (`%User{}`) | Structs are maps; records are tuples.                 |
+| Parse Transforms       | Macros              | Macros manipulate AST directly.                       |
+| `global` / `pg`        | `Registry` / `pg`   | Elixir provides `Registry` for local/pubsub.          |
+| `rebar3`               | `mix`               | Mix is the standard build tool.                       |
+| `ets`                  | `ETS` / `Agent`     | `Agent` for simple state, `ETS` for concurrent reads. |
 
 ## 13. Test Your Knowledge
 
@@ -579,34 +636,40 @@ Elixir provides many tools, but idiomatic Elixir favors simplicity and explicitn
 <summary>When should you use a <code>Stream</code> instead of an <code>Enum</code>?</summary>
 
 Use `Stream` when you are chaining multiple transformations on a large or potentially infinite collection. `Enum` is eager and creates an intermediate list in memory for every step in the pipeline. `Stream` is lazy; it builds a recipe of computations and only processes the elements (one by one) when forced, saving significant memory and GC overhead.
+
 </details>
 
 <details>
 <summary>Why might a long pipeline (<code>|&gt;</code>) be considered an anti-pattern?</summary>
 
 While pipelines are idiomatic for linear data flow, they become an anti-pattern when they obscure business logic, hide complex error handling (where `with` would be better), or require the same intermediate value multiple times. Readability and explicit branching are more important than forcing code into a single chain.
+
 </details>
 
 <details>
 <summary>What is the difference between a Task and an Agent?</summary>
 
 A `Task` is for asynchronous computation (doing work in the background). An `Agent` is a specialized GenServer for holding and sharing simple state. You use a Task to run a function concurrently, and an Agent to store data that multiple processes need to read or update.
+
 </details>
 
 <details>
 <summary>Why is it dangerous to do heavy computation inside an <code>Agent.update/2</code> call?</summary>
 
-The function passed to `Agent.update/2` executes *inside* the Agent process, not the caller's process. If the computation is heavy, it blocks the Agent, preventing any other process from reading or updating the state until the computation finishes. Heavy computation should be done in the caller process before sending the updated state to the Agent.
+The function passed to `Agent.update/2` executes _inside_ the Agent process, not the caller's process. If the computation is heavy, it blocks the Agent, preventing any other process from reading or updating the state until the computation finishes. Heavy computation should be done in the caller process before sending the updated state to the Agent.
+
 </details>
 
 <details>
 <summary>How do you handle an Erlang library that expects a string but fails when you pass it an Elixir string?</summary>
 
 Elixir strings are UTF-8 binaries (`"string"`), while Erlang strings are often charlists (lists of integers, `'string'`). You must explicitly convert the Elixir string using `String.to_charlist/1` before passing it to the Erlang API.
+
 </details>
 
 <details>
 <summary>What is the first rule of writing Macros in Elixir?</summary>
 
 Don't write macros. Macros hide complexity, make debugging harder, and increase compile times. They should only be used when metaprogramming is strictly necessary to create a DSL or eliminate massive boilerplate, and even then, the macro should delegate to plain functions as much as possible.
+
 </details>

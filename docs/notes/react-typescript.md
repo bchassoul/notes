@@ -47,6 +47,20 @@ Data owned and managed by the component itself. Updating state is what triggers 
 </div>
 </div>
 
+```mermaid
+flowchart TD
+    Parent["Parent Component\nowns state: count = 3"]
+    ChildA["Child A\nprops: { count, onIncrement }"]
+    ChildB["Child B\nprops: { count }"]
+
+    Parent -->|"props flow down (read-only)"| ChildA
+    Parent -->|"props flow down (read-only)"| ChildB
+    ChildA -->|"calls onIncrement()\n→ setState in Parent\n→ re-render flows down"| Parent
+
+```
+
+> Data flows in one direction: down through props. State changes travel back up through callbacks, then flow down again as new props.
+
 ### 1.3 Controlled vs Uncontrolled Components
 
 <div class="cols-2">
@@ -63,6 +77,24 @@ The DOM holds the value (accessed via `ref`). Use for simple cases, file inputs,
 
 </div>
 </div>
+
+```mermaid
+flowchart LR
+    subgraph Controlled["Controlled — React owns the value"]
+        direction LR
+        UI1["User types"] --> OC["onChange fires"]
+        OC --> ST["setState(val)"]
+        ST --> RR["Re-render"]
+        RR --> IN1["input value={val}"]
+        IN1 --> UI1
+    end
+
+    subgraph Uncontrolled["Uncontrolled — DOM owns the value"]
+        direction LR
+        UI2["User types"] --> DOM["DOM holds value"]
+        DOM -.->|"ref.current.value\n(read on demand)"| Handler["onSubmit handler"]
+    end
+```
 
 > [!WARNING]
 > **COMMON MISTAKE**
@@ -97,6 +129,21 @@ Runs side effects after the component renders.
 - Omitted: Runs after every render.
 - `[]`: Runs once after mount.
 - `[a, b]`: Runs when `a` or `b` changes.
+
+```mermaid
+flowchart TD
+    M["Component Mounts"] --> E1["Run effect\n(always on mount)"]
+    E1 --> L["React watches\ndependency array"]
+
+    L -->|"dep changed\nor no array"| CL["Run cleanup\nfrom previous effect"]
+    CL --> E2["Run effect again"]
+    E2 --> L
+
+    L -->|"deps unchanged"| L
+
+    U["Component Unmounts"] --> CLU["Run final cleanup"]
+
+```
 
 ### 2.3 `useCallback` and `useMemo`
 
@@ -150,6 +197,26 @@ When multiple components need to work together implicitly (like a `<select>` and
 
 A JavaScript error in a part of the UI shouldn't break the whole app. Error boundaries catch errors anywhere in their child component tree and display a fallback UI.
 
+```mermaid
+flowchart TD
+    App["App"]
+    Nav["Nav\n(safe — outside boundary)"]
+    EB1["ErrorBoundary\n(wraps main content)"]
+    EB2["ErrorBoundary\n(wraps widget)"]
+    Route["Route A\n(safe)"]
+    Widget["Widget\n💥 throws error"]
+    Fallback["Fallback UI\n(error caught here)"]
+
+    App --> Nav
+    App --> EB1
+    EB1 --> Route
+    EB1 --> EB2
+    EB2 --> Widget
+    Widget -.->|"error bubbles up\nto nearest boundary"| EB2
+    EB2 -.->|"renders instead"| Fallback
+
+```
+
 > [!NOTE]
 > **ADVANCED CONCEPT**
 >
@@ -158,6 +225,28 @@ A JavaScript error in a part of the UI shouldn't break the whole app. Error boun
 ### 3.4 Lifting State Up
 
 When two components need to share state, move the state to their closest common ancestor and pass it down as props.
+
+```mermaid
+flowchart TD
+    subgraph Before["Before — state is duplicated, can't sync"]
+        direction TB
+        P1["Parent"]
+        A1["Sibling A\nstate: selectedId"]
+        B1["Sibling B\nstate: selectedId"]
+        P1 --> A1
+        P1 --> B1
+    end
+
+    subgraph After["After — state lifted to common ancestor"]
+        direction TB
+        P2["Parent\nstate: selectedId"]
+        A2["Sibling A\nprops: { selectedId, onSelect }"]
+        B2["Sibling B\nprops: { selectedId }"]
+        P2 -->|"props"| A2
+        P2 -->|"props"| B2
+        A2 -->|"onSelect(id) callback"| P2
+    end
+```
 
 **Trade-off:** Lifting state too high makes the tree unnecessarily coupled and causes wide re-renders. Keeping state too local prevents necessary coordination.
 
@@ -195,6 +284,27 @@ UI state that only exists in the browser (e.g., Modal open, selected tab, form d
 
 </div>
 </div>
+
+```mermaid
+flowchart LR
+    subgraph ServerState["Server State — React Query / Apollo / SWR"]
+        direction TB
+        API["Backend API"]
+        Cache["Local Cache\n(stale-while-revalidate)"]
+        API <-->|"fetch, background refetch"| Cache
+    end
+
+    subgraph ClientState["Client State — useState / Zustand / Context"]
+        direction TB
+        Events["UI Events\n(click, type)"]
+        Local["Local State\n(modal open, tab, form draft)"]
+        Events --> Local
+    end
+
+    Cache -->|"data as props/hooks"| Comp["Component"]
+    Local -->|"state as props/hooks"| Comp
+
+```
 
 > [!TIP]
 > **THE MODERN APPROACH**
@@ -298,6 +408,22 @@ React 18 introduced Concurrent Rendering. It allows React to interrupt a heavy r
   ```
 - **`useDeferredValue`**: Returns a lagging version of a value that updates only after high-priority renders finish.
 
+```mermaid
+flowchart TD
+    subgraph Without["Without useTransition"]
+        direction LR
+        T1["User types 'a'"] --> HR["Heavy render\n1000 results\n(blocks input)"]
+        HR --> T2["User types 'ab'\n(input feels laggy)"]
+    end
+
+    subgraph With["With useTransition"]
+        direction LR
+        T3["User types 'a'"] --> UU["Urgent: input\nupdates immediately"]
+        UU --> DR["startTransition:\nrender results\n(interruptible, low priority)"]
+        T4["User types 'ab'\n(instant response)"] -->|"interrupts &\nrestarts deferred render"| DR
+    end
+```
+
 ### 6.2 Common Sources of Unnecessary Re-renders
 
 - Passing new object or array literals as props on every render.
@@ -331,6 +457,27 @@ Run on the server (for SSR) *and* in the browser. They have access to browser AP
 
 </div>
 </div>
+
+```mermaid
+flowchart TD
+    subgraph ServerEnv["Server — never shipped to browser"]
+        SC1["ServerLayout\nawait db.users()\n(zero bundle impact)"]
+        SC2["ServerSidebar\nawait db.nav()"]
+    end
+
+    Boundary["─── 'use client' boundary ───\nJS bundle starts here"]
+
+    subgraph ClientEnv["Client — runs in browser"]
+        CC1["SearchBar\nuseState, useEffect\n(interactive)"]
+        CC2["Button\nonClick handler\n(interactive)"]
+    end
+
+    SC1 -->|"passes serializable props\n(no functions, no classes)"| Boundary
+    SC1 -->|"renders as children\n(no hydration cost)"| SC2
+    Boundary --> CC1
+    Boundary --> CC2
+
+```
 
 > [!TIP]
 > **THE RSC MENTAL MODEL**

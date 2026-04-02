@@ -70,6 +70,31 @@ Long-lived connection for real-time updates over WebSockets.
 </div>
 </div>
 
+```mermaid
+flowchart LR
+    subgraph Query["query — request / response"]
+        direction LR
+        CQ["Client"] -->|"POST /graphql\n{ query: '{ user { name } }' }"| SQ["Server"]
+        SQ -->|"{ data: { user: {...} } }"| CQ
+    end
+
+    subgraph Mutation["mutation — state change + response"]
+        direction LR
+        CM["Client"] -->|"POST /graphql\n{ mutation: 'createAppointment...' }"| SM["Server"]
+        SM -->|"writes to DB"| DB[("Database")]
+        SM -->|"{ data: { createAppointment: { id, ... } } }"| CM
+    end
+
+    subgraph Subscription["subscription — persistent push connection"]
+        direction LR
+        CS["Client"] -->|"WS: subscribe\n{ subscription: 'onNewMessage...' }"| SS["Server"]
+        SS -.->|"push event 1"| CS
+        SS -.->|"push event 2"| CS
+        SS -.->|"push event N"| CS
+        NOTE["connection stays open\nuntil client unsubscribes"]
+    end
+```
+
 ### 1.3 GraphQL over HTTP (The Transport Layer)
 
 While GraphQL is transport-agnostic, it is almost always served over HTTP. Unlike REST, which uses different HTTP methods and URLs, GraphQL typically uses a single endpoint (e.g., `/graphql`) and `POST` requests.
@@ -135,6 +160,27 @@ type Patient {
   name: String! # never null
   notes: String # may be null
 }
+```
+
+```mermaid
+flowchart TD
+    subgraph NullProp["Null propagation — non-null field failure bubbles up"]
+        direction TB
+        Q["query { user { profile { avatar { url! } } } }"]
+        U["user (nullable)"]
+        P["profile (nullable)"]
+        AV["avatar (nullable)"]
+        URL["url: String! (NON-NULL)"]
+        ERR["resolver returns null"]
+
+        Q --> U --> P --> AV --> URL
+        URL -->|"null returned"| ERR
+        ERR -->|"null propagates up\nto nearest nullable parent"| AV
+        AV -->|"avatar becomes null"| P
+        P -->|"profile becomes null"| U
+        U -->|"user becomes null\nin response"| RESULT["{ data: { user: null } }"]
+
+    end
 ```
 
 > [!TIP]
@@ -250,6 +296,36 @@ flowchart LR
 
 Authorization is not a GraphQL concern by default — it belongs in your application logic, not the schema.
 
+```mermaid
+flowchart TD
+    REQ["Incoming Request"]
+
+    subgraph Middleware["Option 1 — Middleware / Directive (Recommended)"]
+        direction LR
+        MW["@auth directive\nor middleware layer"]
+        MW -->|"check passes"| RES1["Resolver executes"]
+        MW -->|"check fails"| ERR1["Auth error (consistent)"]
+    end
+
+    subgraph Context["Option 2 — Context injection (Good)"]
+        direction LR
+        CTX["current_user attached\nto context"]
+        RES2["Resolver checks\nctx.current_user"]
+        CTX --> RES2
+        RES2 -->|"fails"| ERR2["Auth error (manual)"]
+    end
+
+    subgraph PerResolver["Option 3 — Per-Resolver (Fragile)"]
+        direction LR
+        RES3A["Resolver A\nif !user: error"]
+        RES3B["Resolver B\n(forgot to check! 🐛)"]
+    end
+
+    REQ --> Middleware
+    REQ --> Context
+    REQ --> PerResolver
+```
+
 <div class="cols-2">
 <div class="col">
 
@@ -317,6 +393,22 @@ A GraphQL response always returns HTTP 200. Errors are communicated through the 
 When a resolver returns an error, the field gets an entry in the errors array. When it returns null, the field is null with no error. Decide intentionally: is "not found" an error or a valid empty state?
 
 ### 5.3 User Errors vs System Errors
+
+```mermaid
+flowchart TD
+    MUT["mutation createUser(email: '...', password: '...')"]
+
+    MUT --> SRV["Server processes request"]
+
+    SRV -->|"DB down, crash,\nunhandled exception"| SYSERR["System Error\n→ top-level 'errors' array\nHTTP 200 with error details"]
+
+    SRV -->|"'Email already taken'\n'Password too short'"| USRERR["User Error\n→ data.createUser.userErrors\n[ { field: 'email', message: '...' } ]"]
+
+    SRV -->|"success"| OK["data.createUser.user\n{ id, email, ... }"]
+
+```
+
+> System errors are exceptional — they should be rare and require developer attention. User errors are expected — they are part of normal validation flow and belong in the typed payload where clients can handle them gracefully.
 
 <div class="cols-2">
 <div class="col">
@@ -467,6 +559,27 @@ Subscriptions provide real-time updates through a long-lived connection (typical
 
 1. Client subscribes and opens a persistent connection
 2. When a triggering event occurs on the server, the server pushes the update to all relevant subscribers
+
+```mermaid
+sequenceDiagram
+    participant ClientA as Client A (sender)
+    participant ClientB as Client B (subscriber)
+    participant GQL as GraphQL Server
+    participant PubSub as PubSub Bus
+    participant DB as Database
+
+    ClientB->>GQL: WS: subscription { onNewMessage(roomId: "42") }
+    note over ClientB,GQL: Persistent WebSocket connection open
+
+    ClientA->>GQL: mutation { sendMessage(roomId: "42", text: "Hello") }
+    GQL->>DB: INSERT INTO messages
+    DB-->>GQL: message saved
+    GQL->>PubSub: broadcast("room:42", message)
+
+    PubSub-->>GQL: subscribers for "room:42"
+    GQL-->>ClientB: push { data: { onNewMessage: { text: "Hello" } } }
+    GQL-->>ClientA: { data: { sendMessage: { id: "..." } } }
+```
 
 > [!NOTE]
 > **TRADE-OFFS**

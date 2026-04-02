@@ -42,11 +42,13 @@ Semantic search solves this by representing meaning as geometry: similar meaning
 An **embedding** is a list of floating-point numbers — a vector — that represents the meaning of a piece of text in high-dimensional space. Texts with similar meaning produce vectors that are geometrically close to each other.
 
 The embedding model is an encoder neural network (transformer-based). It:
+
 1. Tokenizes the input text
 2. Passes tokens through attention layers
 3. Outputs a fixed-size float array (the embedding vector)
 
 Common dimensions:
+
 - `text-embedding-3-small` (OpenAI) → 1536 dimensions
 - `text-embedding-3-large` (OpenAI) → 3072 dimensions
 - `textembedding-gecko` (Vertex AI) → 768 dimensions
@@ -65,10 +67,6 @@ flowchart LR
 
     note["Distance in vector space = semantic distance"]
 
-    style A fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style B fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style C fill:#fff3e0,stroke:#ff9800,color:#000
-    style note fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 > [!TIP]
@@ -81,18 +79,18 @@ flowchart LR
 
 **Cosine similarity**
 
-Measures the *angle* between two vectors, ignoring their magnitude. Value ranges from -1 (opposite) to 1 (identical direction).
+Measures the _angle_ between two vectors, ignoring their magnitude. Value ranges from -1 (opposite) to 1 (identical direction).
 
 - Most common for text embeddings
 - Robust when vectors have different magnitudes (e.g., short vs. long documents)
-- Used by pgvector's `<=>` operator (cosine *distance* = 1 - cosine similarity)
+- Used by pgvector's `<=>` operator (cosine _distance_ = 1 - cosine similarity)
 
 </div>
 <div class="col">
 
 **Euclidean (L2) distance**
 
-Measures the straight-line *distance* between two points in vector space.
+Measures the straight-line _distance_ between two points in vector space.
 
 - Sensitive to vector magnitude — longer texts can produce larger-magnitude vectors
 - Used by pgvector's `<->` operator
@@ -108,6 +106,7 @@ Measures the straight-line *distance* between two points in vector space.
 ### 2.1 What pgvector Is
 
 pgvector is a PostgreSQL extension that adds:
+
 - A `vector(n)` column type for storing embedding arrays
 - Similarity search operators (`<=>`, `<->`, `<#>`)
 - HNSW and IVFFlat indexes for approximate nearest-neighbor search
@@ -177,11 +176,11 @@ LIMIT 10;
 
 The three pgvector distance operators:
 
-| Operator | Distance type | Use case |
-| --- | --- | --- |
-| `<=>` | Cosine distance | Text embeddings (most common) |
-| `<->` | L2 (Euclidean) distance | Magnitude-sensitive comparisons |
-| `<#>` | Negative inner product | When vectors are pre-normalized |
+| Operator | Distance type           | Use case                        |
+| -------- | ----------------------- | ------------------------------- |
+| `<=>`    | Cosine distance         | Text embeddings (most common)   |
+| `<->`    | L2 (Euclidean) distance | Magnitude-sensitive comparisons |
+| `<#>`    | Negative inner product  | When vectors are pre-normalized |
 
 In Elixir via Ecto with the `pgvector` hex package:
 
@@ -214,10 +213,6 @@ flowchart TD
 
     note["HNSW: navigates top-down from coarse to fine"]
 
-    style L2 fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style L1 fill:#fff3e0,stroke:#ff9800,color:#000
-    style L0 fill:#e6f4ea,stroke:#4caf50,color:#000
-    style note fill:#fce4ec,stroke:#e91e63,color:#000
 ```
 
 > [!NOTE]
@@ -239,34 +234,28 @@ CREATE INDEX ON shipment_descriptions
 
 When to use each:
 
-| | HNSW | IVFFlat |
-| --- | --- | --- |
-| Recall | Higher (better accuracy) | Lower (approximate clustering) |
-| Memory | Higher (graph in RAM) | Lower |
-| Build time | Slower | Faster |
-| Good for | Production default, < 10M vectors | > 1M vectors, memory-constrained |
-| Index build on existing data | Can build after insert | Requires data to exist first |
+|                              | HNSW                              | IVFFlat                          |
+| ---------------------------- | --------------------------------- | -------------------------------- |
+| Recall                       | Higher (better accuracy)          | Lower (approximate clustering)   |
+| Memory                       | Higher (graph in RAM)             | Lower                            |
+| Build time                   | Slower                            | Faster                           |
+| Good for                     | Production default, < 10M vectors | > 1M vectors, memory-constrained |
+| Index build on existing data | Can build after insert            | Requires data to exist first     |
 
 > [!TIP]
 > For most logistics applications (hundreds of thousands to low millions of vectors), start with HNSW and no index first. Add the index when query latency exceeds your SLA. Brute-force is surprisingly fast up to ~100K rows.
 
 ### 2.6 pgvector vs Dedicated Vector Databases
 
-<div class="cols-2">
-<div class="col">
-
-| | pgvector | Pinecone / Weaviate |
-| --- | --- | --- |
-| Setup | PostgreSQL extension, already in your stack | Separate managed service |
-| Scale | Good to ~10M vectors | Billions of vectors |
-| Cost | No additional cost | Adds infrastructure cost |
-| Consistency | ACID with your relational data | Eventual, separate data store |
-| Operational overhead | None if you run Postgres | New service to operate |
-| Filtering | Full SQL — join on any column | Limited metadata filters |
-| Hybrid search | Combine vector + SQL predicates | Depends on the product |
-
-</div>
-<div class="col">
+|                      | pgvector                                    | Pinecone / Weaviate           |
+| -------------------- | ------------------------------------------- | ----------------------------- |
+| Setup                | PostgreSQL extension, already in your stack | Separate managed service      |
+| Scale                | Good to ~10M vectors                        | Billions of vectors           |
+| Cost                 | No additional cost                          | Adds infrastructure cost      |
+| Consistency          | ACID with your relational data              | Eventual, separate data store |
+| Operational overhead | None if you run Postgres                    | New service to operate        |
+| Filtering            | Full SQL — join on any column               | Limited metadata filters      |
+| Hybrid search        | Combine vector + SQL predicates             | Depends on the product        |
 
 **When to migrate away from pgvector**
 
@@ -274,9 +263,6 @@ When to use each:
 - You need billions of vectors — pgvector's practical ceiling is ~50–100M vectors with HNSW
 - You need multi-tenant isolation at the vector layer
 - Your query patterns require dedicated ANN infrastructure (sub-millisecond at 1B+ scale)
-
-</div>
-</div>
 
 > [!NOTE]
 > **TRADE-OFFS**
@@ -292,6 +278,7 @@ When to use each:
 ### 3.1 The Problem RAG Solves
 
 LLMs are trained on static, public data. They do not know:
+
 - Your internal routing policies
 - Your SKU catalog and pricing
 - Your customer-specific SLAs and contracts
@@ -351,22 +338,20 @@ flowchart TD
 
     UPSERT -->|"shared vector store"| SEARCH
 
-    style Ingestion fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Query fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 Both paths share the same pgvector table. The ingestion path populates it; the query path reads from it.
 
 ### 3.3 Context Stuffing vs. Fine-Tuning Trade-offs
 
-| | RAG | Fine-tuning |
-| --- | --- | --- |
-| Update frequency | Real-time (update vector store) | Requires retraining |
-| Cost | Per-query retrieval + inference | High upfront, lower per-query |
-| Accuracy on domain | Good with quality retrieval | Better for style/format |
+|                    | RAG                                | Fine-tuning                      |
+| ------------------ | ---------------------------------- | -------------------------------- |
+| Update frequency   | Real-time (update vector store)    | Requires retraining              |
+| Cost               | Per-query retrieval + inference    | High upfront, lower per-query    |
+| Accuracy on domain | Good with quality retrieval        | Better for style/format          |
 | Hallucination risk | Lower (grounded in retrieved docs) | Higher (model "remembers" facts) |
-| Latency | Extra retrieval round-trip | No retrieval overhead |
-| Interpretability | Retrieved chunks are auditable | Model internals are opaque |
+| Latency            | Extra retrieval round-trip         | No retrieval overhead            |
+| Interpretability   | Retrieved chunks are auditable     | Model internals are opaque       |
 
 > [!NOTE]
 > **TRADE-OFFS**
@@ -400,6 +385,38 @@ Documents must be split into chunks before embedding. The embedding model has a 
 
 </div>
 </div>
+
+```mermaid
+flowchart LR
+    DOC["Document\n'Shipment SLA: Tier 1 customers receive\nnext-day delivery. Tier 2 customers receive\n3-day delivery. Exceptions apply when...\nForce majeure clauses include natural disasters,\nport closures, and carrier strikes...'"]
+
+    subgraph Fixed["Fixed-size (N tokens)"]
+        direction LR
+        F1["Chunk 1\n'Shipment SLA: Tier 1\ncustomers receive next-day'"]
+        F2["Chunk 2\n'delivery. Tier 2 customers\nreceive 3-day delivery.'"]
+        F3["Chunk 3\n'Exceptions apply when...'"]
+        F1 --- F2 --- F3
+    end
+
+    subgraph Paragraph["Paragraph-level + overlap (recommended)"]
+        direction LR
+        P1["Chunk 1\n'Tier 1: next-day\nTier 2: 3-day delivery'"]
+        P2["Chunk 2\n'...delivery. Exceptions\napply when...' ← overlap"]
+        P3["Chunk 3\n'Force majeure: natural\ndisasters, port closures...'"]
+        P1 --- P2 --- P3
+    end
+
+    subgraph Semantic["Semantic chunking (embedding similarity)"]
+        direction LR
+        S1["Chunk 1\n'Delivery tiers &\nSLA commitments'\n(topic: delivery)"]
+        S2["Chunk 2\n'Force majeure &\nexception clauses'\n(topic: exceptions)"]
+        S1 --- S2
+    end
+
+    DOC --> Fixed
+    DOC --> Paragraph
+    DOC --> Semantic
+```
 
 For logistics documents (shipping policies, SLAs, route descriptions): paragraph-level chunking with 10% overlap is a reliable default.
 
@@ -568,10 +585,6 @@ flowchart LR
     B1 -->|"batch of 100 texts"| OAI["OpenAI Embeddings API\n(batch call)"]
     OAI -->|"100 float arrays"| PG["Ecto upsert\ninto pgvector"]
 
-    style Broadway fill:#e6f4ea,stroke:#4caf50,color:#000
-    style KAFKA fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style OAI fill:#fff3e0,stroke:#ff9800,color:#000
-    style PG fill:#fce4ec,stroke:#e91e63,color:#000
 ```
 
 Cost at scale: `text-embedding-3-small` costs ~$0.02 per 1M tokens. A typical shipment description is ~50 tokens. Processing 1M descriptions costs ~$1.00 in embedding API fees.
@@ -654,12 +667,12 @@ sequenceDiagram
 
 Failure mode summary:
 
-| Failure | Detection | Mitigation |
-| --- | --- | --- |
-| API throttling (429) | HTTP status, fuse melt | Circuit breaker + exponential backoff |
-| Model version mismatch | `embedding_model` column drift | Track model in schema, re-embed on version change |
-| Dimension mismatch | pgvector insert error | Validate dimension at ingestion, alert on config changes |
-| Stale embeddings (silent) | Recall degradation metrics | Periodic spot-check: embed known queries, verify top-K |
+| Failure                   | Detection                      | Mitigation                                               |
+| ------------------------- | ------------------------------ | -------------------------------------------------------- |
+| API throttling (429)      | HTTP status, fuse melt         | Circuit breaker + exponential backoff                    |
+| Model version mismatch    | `embedding_model` column drift | Track model in schema, re-embed on version change        |
+| Dimension mismatch        | pgvector insert error          | Validate dimension at ingestion, alert on config changes |
+| Stale embeddings (silent) | Recall degradation metrics     | Periodic spot-check: embed known queries, verify top-K   |
 
 ## 5. Logistics Use Cases
 
@@ -675,6 +688,7 @@ The problem: incoming shipment descriptions are free-text written by customers. 
 4. Return the top match (or present options for operator review)
 
 Example:
+
 - Customer writes: "laptop computer, 2 units, fragile"
 - Catalog has: "notebook PC / portable computer — SKU-4421"
 - Cosine similarity: 0.93 → match
@@ -731,13 +745,15 @@ Example operator query: "What's the SLA for temperature-controlled shipments to 
 <details>
 <summary>What does cosine similarity measure, and why is it preferred for text embeddings?</summary>
 
-Cosine similarity measures the *angle* between two vectors — specifically the cosine of that angle — ignoring their magnitude. It ranges from -1 (opposite directions) to 1 (identical direction). It is preferred for text embeddings because embedding models (OpenAI, Vertex AI) normalize their output vectors, making magnitude uninformative. Two short and two long documents about the same topic will have similar cosine similarity scores even though their magnitudes differ. In contrast, Euclidean (L2) distance would penalize magnitude differences, making short and long documents about the same topic appear more distant than they are.
+Cosine similarity measures the _angle_ between two vectors — specifically the cosine of that angle — ignoring their magnitude. It ranges from -1 (opposite directions) to 1 (identical direction). It is preferred for text embeddings because embedding models (OpenAI, Vertex AI) normalize their output vectors, making magnitude uninformative. Two short and two long documents about the same topic will have similar cosine similarity scores even though their magnitudes differ. In contrast, Euclidean (L2) distance would penalize magnitude differences, making short and long documents about the same topic appear more distant than they are.
+
 </details>
 
 <details>
 <summary>When should you use pgvector vs. a dedicated vector database like Pinecone?</summary>
 
 Start with pgvector. It adds vector search to your existing PostgreSQL instance with no new infrastructure, ACID consistency with your relational data, and full SQL filtering (join, WHERE clauses alongside vector search). It is the right choice for up to ~10M vectors with HNSW indexing. Migrate to a dedicated vector database when: (1) your HNSW index no longer fits in RAM and query latency degrades, (2) you need to scale beyond 50–100M vectors, (3) you need purpose-built multi-tenant isolation at the vector layer, or (4) your query patterns require sub-millisecond ANN search at billion-vector scale.
+
 </details>
 
 <details>
@@ -746,34 +762,40 @@ Start with pgvector. It adds vector search to your existing PostgreSQL instance 
 **Ingestion path:** (1) Collect raw documents (policies, SKU descriptions, routes). (2) Chunk them into segments (paragraph-level with overlap). (3) Embed each chunk in batches via the embeddings API. (4) Upsert the chunk text + embedding vector into pgvector.
 
 **Query path:** (1) Receive user query as natural language text. (2) Embed the query using the same model used for ingestion. (3) Run a similarity search against pgvector (`ORDER BY embedding <=> $1 LIMIT K`). (4) Retrieve the top-K most similar chunks. (5) Build a prompt that includes the retrieved chunks as context. (6) Send the prompt to the LLM. (7) Return the answer to the user.
+
 </details>
 
 <details>
 <summary>Why does chunking strategy matter, and what are the trade-offs between small and large chunks?</summary>
 
-Chunking strategy matters because the embedding vector represents the *average meaning* of the chunk. If a chunk is too large, the vector averages over too many topics and becomes noisy — similarity search becomes imprecise. If a chunk is too small, retrieval is precise but the LLM receives insufficient context to reason over. Small chunks (100–200 tokens): precise retrieval, less context per chunk, may require retrieving more chunks. Large chunks (500–1000 tokens): richer context, but similarity search is less precise. Overlap between chunks (10–20%) prevents important context from being split across a chunk boundary. The right size depends on the document type — short policy clauses warrant small chunks; long route descriptions warrant paragraph-level chunks.
+Chunking strategy matters because the embedding vector represents the _average meaning_ of the chunk. If a chunk is too large, the vector averages over too many topics and becomes noisy — similarity search becomes imprecise. If a chunk is too small, retrieval is precise but the LLM receives insufficient context to reason over. Small chunks (100–200 tokens): precise retrieval, less context per chunk, may require retrieving more chunks. Large chunks (500–1000 tokens): richer context, but similarity search is less precise. Overlap between chunks (10–20%) prevents important context from being split across a chunk boundary. The right size depends on the document type — short policy clauses warrant small chunks; long route descriptions warrant paragraph-level chunks.
+
 </details>
 
 <details>
 <summary>Compare RAG and fine-tuning for grounding LLM responses in private logistics data.</summary>
 
 RAG injects relevant context into the prompt at inference time by retrieving it from a vector store. Fine-tuning modifies the model's weights by training on private data. RAG wins when: knowledge changes frequently (no retraining needed — update the vector store), auditability is required (retrieved chunks are visible), and upfront cost must be low. Fine-tuning wins when: the model's output format, tone, or reasoning style must change (not just factual knowledge), and per-query prompt size is a constraint (fine-tuned knowledge doesn't consume context window). For logistics, RAG is almost always the right first choice because policies, SLAs, and catalogs change continuously.
+
 </details>
 
 <details>
 <summary>How do you keep embeddings fresh when source documents change?</summary>
 
 Hash the source text (e.g., SHA-256) and store the hash alongside the embedding in the database. Before re-embedding a document, compare the new content hash against the stored hash. If they match, skip — the embedding is still valid. If they differ, call the embeddings API and upsert the new vector along with the updated hash. This avoids redundant API calls during bulk reprocessing. Additionally, store the `embedding_model` name in the table. When the embedding model changes (e.g., OpenAI deprecates a model version), detect the mismatch at query time and trigger a background re-embedding job. Never compare vectors from different model versions — they occupy incompatible vector spaces.
+
 </details>
 
 <details>
 <summary>Describe the HNSW index structure and explain how it enables fast approximate nearest-neighbor search.</summary>
 
 HNSW (Hierarchical Navigable Small World) builds a multi-layer graph over the stored vectors. The top layer has a small number of nodes with long-range connections — it provides coarse navigation across the entire vector space. Lower layers have progressively more nodes with shorter connections, enabling finer-grained search. At query time, the algorithm enters at the top layer, greedily navigates toward the query vector using long-range links, then descends to the next layer and repeats with shorter links until it reaches the bottom layer, where it finds the true approximate nearest neighbors. This top-down coarse-to-fine navigation is O(log n) rather than O(n) for the brute-force scan, at the cost of slightly reduced recall (ANN vs. exact NN). The trade-off is controlled by the `ef_construction` parameter during build and `ef_search` at query time.
+
 </details>
 
 <details>
 <summary>What happens when you compare query vectors from model v2 against stored embeddings from model v1, and how do you prevent it?</summary>
 
 Different embedding models occupy different vector spaces — a text embedded with `text-embedding-ada-002` produces a vector in a different geometric space than the same text embedded with `text-embedding-3-small`. Comparing across model versions produces incorrect similarity scores: the nearest neighbors returned are semantically unrelated, but the pipeline fails silently without errors. The fix: store the embedding model name in a column (`embedding_model TEXT`). At ingestion, validate that the model in config matches the model stored for existing rows. When migrating models, run a background job that re-embeds all stored documents with the new model before switching the query path. During the migration window, serve queries from both indexes or block queries until re-embedding is complete.
+
 </details>

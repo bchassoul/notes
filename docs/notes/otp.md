@@ -66,6 +66,20 @@ Erlang is not just a language. It runs on the BEAM, a concurrency-oriented runti
 </div>
 </div>
 
+```mermaid
+flowchart LR
+    subgraph Send["Sending — asynchronous, fire and forget"]
+        direction LR
+        PA["Process A"] -->|"Pid ! {:hello, data}\n(returns immediately)"| MB["Process B\nMailbox\n[ msg1, msg2, msg3 ]"]
+    end
+
+    subgraph Receive["Receiving — pattern matching selects a message"]
+        direction LR
+        MBR["Mailbox\n[ msg1, msg2, msg3 ]"] -->|"receive\n{:hello, data} ->\nhandle(data)"| Handler["callback runs\nprocess loop continues"]
+        MBR -->|"no match\nmessage stays in mailbox"| MBR
+    end
+```
+
 > [!NOTE]
 > **TRADE-OFFS**
 >
@@ -592,6 +606,22 @@ For simple state machines that don't need these, `gen_server` works fine (~2 µs
 </div>
 </div>
 
+```mermaid
+stateDiagram-v2
+    [*] --> disconnected
+
+    disconnected --> connecting : connect(host)
+    connecting --> connected : :connected
+    connecting --> disconnected : :timeout or :error
+    connected --> disconnected : :disconnect or :error
+
+    note right of connecting
+        State function: connecting/3
+        handles :connected, :timeout, :error
+        illegal events → pattern-match error
+    end note
+```
+
 > [!NOTE]
 > Alongside the state name, `gen_statem` keeps a separate **server data** term. In `gen_server`, state is just data. In `gen_statem`, the state name is a first-class concept, each state is a function, and illegal transitions become pattern-match errors rather than silent conditional bugs.
 
@@ -627,6 +657,19 @@ All handlers run in the same process with no isolation between them. A crashing 
 </div>
 </div>
 
+```mermaid
+flowchart LR
+    subgraph Manager["Event Manager Process (single process)"]
+        EVT["Event arrives\n:error_occurred"] --> H1["Handler 1\nlog to file"]
+        EVT --> H2["Handler 2\nsend alert email"]
+        EVT --> H3["Handler 3\nincrement metric"]
+        H2 -->|"💥 crashes"| KILL["Manager dies\nH1, H3 also lost"]
+    end
+
+    note["Handlers added/removed at runtime\nbut NO isolation between them"]
+
+```
+
 > [!TIP]
 > `gen_event` trades isolation for simplicity. A crashing handler can take down the entire manager and all other handlers with it.
 
@@ -654,9 +697,6 @@ flowchart TD
     Q2 -->|no| Q3
     Q3 -->|yes| GE
 
-    style GS   fill:#e6f4ea,stroke:#4caf50,color:#000
-    style GSM  fill:#e6f4ea,stroke:#4caf50,color:#000
-    style GE   fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 ## 5. Supervision
@@ -776,6 +816,20 @@ Supervision is not only about restart. It is also about controlled shutdown.
 </div>
 </div>
 
+```mermaid
+flowchart LR
+    subgraph Startup["Startup — left to right (declaration order)"]
+        direction LR
+        DB["1. DB Connection\n(must start first)"] --> Cache["2. Cache\n(depends on DB)"] --> Worker["3. Worker\n(depends on both)"]
+    end
+
+    subgraph Shutdown["Shutdown — right to left (reverse order)"]
+        direction RL
+        W2["3. Worker\nstops first\n(no dependents)"] --> C2["2. Cache\nstops second"] --> D2["1. DB Connection\nstops last\n(others already gone)"]
+    end
+
+```
+
 > Recovery and shutdown are two sides of lifecycle management.
 
 ### 5.5 Tree Design and Dependency Ordering
@@ -798,9 +852,6 @@ flowchart TD
     DB -.->|"depends on"| SVC
     CACHE -.->|"depends on"| JOB
 
-    style INF fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style APP fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style ROOT fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 <div class="cols-2">

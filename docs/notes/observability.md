@@ -13,6 +13,34 @@ Observability is the ability to understand what your system is doing from the ou
 
 The three pillars are complementary. Each answers a different question:
 
+```mermaid
+flowchart LR
+    subgraph Logs["Logs — What happened?"]
+        direction TB
+        LE["Structured events\nwith context\n(JSON key-value)"]
+        LT["Tools: Datadog, Loki,\nCloudWatch, Papertrail"]
+        LE --> LT
+    end
+
+    subgraph Metrics["Metrics — How much / how often?"]
+        direction TB
+        ME["Numeric aggregates\nover time\n(counters, gauges, histograms)"]
+        MT["Tools: Prometheus,\nGrafana, StatsD"]
+        ME --> MT
+    end
+
+    subgraph Traces["Traces — Why did this take so long?"]
+        direction TB
+        TE["Request journey\nacross services\n(spans + timing)"]
+        TT["Tools: Honeycomb,\nJaeger, Datadog APM"]
+        TE --> TT
+    end
+
+    App["Your Application"] --> Logs
+    App --> Metrics
+    App --> Traces
+```
+
 <div class="cols-2">
 <div class="col">
 
@@ -97,12 +125,17 @@ Something failed and requires attention.
 
 A unique ID attached to every request and propagated through all log entries, background jobs, and downstream calls for that request.
 
-```
-request_id: "req-abc123" appears in:
-  - HTTP request log
-  - database query log
-  - background job log
-  - error report
+```mermaid
+flowchart TD
+    Client["Client"] -->|"POST /appointments"| HTTP["HTTP Layer\nrequest_id: req-abc123\nlog: 'Request received'"]
+    HTTP -->|"passes request_id"| Auth["Auth Middleware\nrequest_id: req-abc123\nlog: 'User authenticated'"]
+    Auth -->|"passes request_id"| DB["Database Query\nrequest_id: req-abc123\nlog: 'INSERT appointments'"]
+    DB -->|"enqueues job with request_id"| Job["Background Job\nrequest_id: req-abc123\nlog: 'Sending confirmation email'"]
+    DB -->|"on error"| Err["Error Report (Sentry)\nrequest_id: req-abc123\nfull stack trace"]
+
+    QUERY["Query: request_id = 'req-abc123'\n→ reconstructs full story\nacross all services"]
+    HTTP & Auth & DB & Job & Err -.->|"all searchable by"| QUERY
+
 ```
 
 This lets you reconstruct the full story of a single request across many log lines and services.
@@ -152,9 +185,33 @@ Distribution of values (request duration, response size).
 
 A trace is the complete record of a request's journey through your system — across processes, services, and time. A trace is made of **spans** — individual units of work with a start time, end time, and metadata.
 
-![Distributed Trace Example](/trace-chart.png)
+```mermaid
+flowchart TD
+    subgraph Trace["Trace: req-abc123 (total: 142ms)"]
+        direction TB
 
-> A trace is a flame graph of your request. It shows you exactly where time was spent and where failures occurred.
+        S1["Span: HTTP POST /appointments\n0ms → 142ms (root span)"]
+
+        S2["Span: Auth.verify_token\n2ms → 8ms"]
+
+        S3["Span: DB INSERT appointments\n10ms → 45ms"]
+
+        S4["Span: DB SELECT conflicts\n12ms → 38ms\n(child of S3)"]
+
+        S5["Span: Oban.enqueue_job\n48ms → 55ms"]
+
+        S6["Span: HTTP POST notifications-svc\n60ms → 140ms\n(external call — slow!)"]
+
+        S1 --> S2
+        S1 --> S3
+        S3 --> S4
+        S1 --> S5
+        S1 --> S6
+    end
+
+```
+
+> A trace is a flame graph of your request. It shows you exactly where time was spent and where failures occurred. In this example, the external notifications service at 80ms is the bottleneck.
 
 ### 4.2 OpenTelemetry (OTel)
 
@@ -254,6 +311,31 @@ An SLO is a target for a service's reliability.
 _Example:_ `99.9% of requests respond in < 200ms over a 30-day window.`
 
 **Error Budget:** The gap between 100% and the SLO is the error budget — the amount of unreliability you are allowed before violating the SLO.
+
+```mermaid
+flowchart LR
+    subgraph Budget["SLO: 99.9% — 30-day window = 43.2 minutes allowed downtime"]
+        direction TB
+        TOTAL["100% of requests"]
+        SLO["99.9%\n(must succeed)"]
+        EB["0.1%\nError Budget\n= 43.2 min/month"]
+        TOTAL --> SLO
+        TOTAL --> EB
+    end
+
+    subgraph Spend["Error Budget Lifecycle"]
+        direction LR
+        FULL["Budget: full\n43.2 min remaining"]
+        PARTIAL["Budget: partially spent\n(incidents, deploys)"]
+        EMPTY["Budget: exhausted\n0 min remaining"]
+        ACTION["Feature work\npaused\nReliability work begins"]
+
+        FULL -->|"incidents consume budget"| PARTIAL
+        PARTIAL -->|"further incidents"| EMPTY
+        EMPTY --> ACTION
+    end
+
+```
 
 > [!TIP]
 > **SENIOR IMPLICATION**

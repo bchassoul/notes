@@ -10,6 +10,30 @@ The database is the hardest part of the system to change later. Getting the data
 
 In a B2B SaaS, users belong to organizations (tenants), and data must never leak across tenants.
 
+```mermaid
+flowchart TD
+    subgraph RowLevel["Option A — Row-Level Isolation (Recommended)"]
+        direction LR
+        DB1[("Single Database")]
+        DB1 --- T1A["patients\ntenant_id=A | name=..."]
+        DB1 --- T1B["patients\ntenant_id=B | name=..."]
+        DB1 --- T1C["patients\ntenant_id=A | name=..."]
+    end
+
+    subgraph Schema["Option B — Schema-per-Tenant"]
+        direction LR
+        DB2[("Single Database")]
+        DB2 --- S1["schema: tenant_a\npatients, appointments..."]
+        DB2 --- S2["schema: tenant_b\npatients, appointments..."]
+    end
+
+    subgraph DBPerTenant["Option C — Database-per-Tenant"]
+        direction LR
+        DBA[("DB: tenant_a")]
+        DBB[("DB: tenant_b")]
+    end
+```
+
 <div class="cols-2">
 <div class="col">
 
@@ -104,6 +128,25 @@ flowchart TD
 
 How does your application handle concurrent requests and shared state?
 
+```mermaid
+flowchart LR
+    subgraph Stateless["Stateless Model (Node.js, Rails, Django)"]
+        direction TB
+        Req1["Request 1"] --> S1["Server Instance\n(no state)"]
+        Req2["Request 2"] --> S2["Server Instance\n(no state)"]
+        S1 & S2 -->|"share state via"| Redis[("Redis\nMemcached\nRabbitMQ")]
+        S1 & S2 -->|"persist via"| DB1[("Database")]
+    end
+
+    subgraph Actor["Actor Model (Elixir / OTP)"]
+        direction TB
+        Req3["Request 3"] --> P1["Process\n(holds own state)"]
+        Req4["Request 4"] --> P2["Process\n(holds own state)"]
+        P1 <-->|"message passing"| P2
+        P1 & P2 -->|"persist via"| DB2[("Database")]
+    end
+```
+
 <div class="cols-2">
 <div class="col">
 
@@ -126,6 +169,32 @@ The application runs millions of lightweight, isolated processes (Actors) that c
 ### 3.3 How do we handle Background Jobs?
 
 When a user signs up, you need to send a welcome email. Doing this synchronously blocks the API response.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant DB as Database
+    participant Worker as Job Worker
+    participant Email as Email Service
+
+    Client->>API: POST /signup
+
+    rect rgb(230, 244, 234)
+        note over API,DB: Single atomic transaction
+        API->>DB: INSERT INTO users (...)
+        API->>DB: INSERT INTO oban_jobs (type: send_welcome_email)
+        DB-->>API: COMMIT
+    end
+
+    API-->>Client: 201 Created (fast response)
+
+    Note over DB,Worker: Transaction committed — job is now visible
+    Worker->>DB: Poll for pending jobs
+    DB-->>Worker: send_welcome_email job
+    Worker->>Email: Send welcome email
+    Worker->>DB: Mark job complete
+```
 
 **Recommendation:** Use **Database-backed queues** utilizing the **Transactional Outbox Pattern**. 
 By using the primary database for the queue, you can enqueue the job inside the *exact same database transaction* as the user creation. If the transaction rolls back, the email job is never queued, guaranteeing absolute consistency.
@@ -187,6 +256,34 @@ Ephemeral data that only exists in the browser. Use lightweight tools for things
 ### 5.2 Optimistic Updates
 
 For actions where success is highly likely (e.g., "liking" a post), update the UI *before* the server responds. If the server request fails, roll back the UI state. This makes the application feel infinitely faster.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as UI (Client State)
+    participant API
+
+    User->>UI: Click "Like"
+
+    rect rgb(230, 244, 234)
+        note over UI: Optimistic update (immediate)
+        UI->>UI: likes = likes + 1 (feels instant)
+    end
+
+    UI->>API: POST /posts/1/like (in background)
+
+    alt Server confirms
+        API-->>UI: 200 OK
+        note over UI: Keep optimistic state ✓
+    else Server rejects
+        API-->>UI: 400 / 409 Error
+        rect rgb(253, 236, 234)
+            note over UI: Roll back — likes = likes - 1
+        end
+        UI->>User: Show error toast
+    end
+```
+
 *(Examples: **Apollo Client `optimisticResponse`**, **React Query `onMutate`**)*
 
 ---

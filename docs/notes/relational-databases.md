@@ -87,6 +87,34 @@ _Cost:_ Larger, unordered (v4 can hurt index performance).
 - **One-to-many:** Foreign key on the "many" table (e.g., Owner → Patients)
 - **Many-to-many:** Join table with two foreign keys (e.g., Patients ↔ Diagnoses)
 
+```mermaid
+flowchart LR
+    subgraph OneToOne["One-to-One"]
+        direction LR
+        U["users\n id PK\n name"]
+        UP["user_profiles\n id PK\n user_id FK\n bio"]
+        U -->|"has one"| UP
+    end
+
+    subgraph OneToMany["One-to-Many"]
+        direction LR
+        O["owners\n id PK\n name"]
+        P1["patients\n id PK\n owner_id FK\n name"]
+        P2["patients\n id PK\n owner_id FK\n name"]
+        O -->|"has many"| P1
+        O -->|"has many"| P2
+    end
+
+    subgraph ManyToMany["Many-to-Many"]
+        direction LR
+        PA["patients\n id PK"]
+        J["patient_diagnoses\n patient_id FK\n diagnosis_id FK"]
+        D["diagnoses\n id PK"]
+        PA -->|"FK"| J
+        D -->|"FK"| J
+    end
+```
+
 #### Referential integrity options
 
 When a parent record is deleted, the database can:
@@ -205,6 +233,34 @@ Prevents all anomalies, including phantom reads (running the same query twice an
 </div>
 </div>
 
+| Isolation Level | Dirty Read | Non-Repeatable Read | Phantom Read |
+| --- | --- | --- | --- |
+| Read Uncommitted | possible | possible | possible |
+| **Read Committed** (Postgres default) | prevented | possible | possible |
+| **Repeatable Read** (MySQL default) | prevented | prevented | possible |
+| **Serializable** | prevented | prevented | prevented |
+
+```mermaid
+flowchart LR
+    subgraph DirtyRead["Dirty Read — Tx A reads uncommitted data from Tx B"]
+        direction LR
+        B1["Tx B\nUPDATE balance = 0\n(not committed)"] -->|"Tx A reads 0\nbefore rollback"| A1["Tx A sees\nstale value"]
+        B1 -->|"ROLLBACK"| B1R["balance restored\nbut A already saw 0"]
+    end
+
+    subgraph NRR["Non-Repeatable Read — same row, different value"]
+        direction LR
+        A2["Tx A reads\nrow: balance=100"] --> B2["Tx B commits\nUPDATE balance=50"]
+        B2 --> A2R["Tx A reads again\nrow: balance=50 ≠ 100"]
+    end
+
+    subgraph Phantom["Phantom Read — same query, different row set"]
+        direction LR
+        A3["Tx A runs\nSELECT WHERE age>30\n→ 5 rows"] --> B3["Tx B inserts\nnew row age=35"]
+        B3 --> A3R["Tx A runs again\n→ 6 rows (phantom!)"]
+    end
+```
+
 > [!WARNING]
 > **FAILURE SCENARIO**
 >
@@ -222,6 +278,28 @@ Instead of overwriting data in place, the database creates a _new version_ of th
 - **Readers don't block writers, and writers don't block readers.**
 - A reader sees a snapshot of the database as it existed when their transaction started.
 - _Cost:_ Old versions of rows ("dead tuples") accumulate and must be cleaned up periodically (e.g., `VACUUM` in Postgres) to prevent database bloat.
+
+```mermaid
+sequenceDiagram
+    participant TxA as Tx A (Reader, started t=1)
+    participant DB as Database
+    participant TxB as Tx B (Writer, started t=2)
+
+    note over DB: Row v1: balance=100 (created t=0)
+
+    TxA->>DB: BEGIN (snapshot at t=1)
+    TxB->>DB: BEGIN
+    TxB->>DB: UPDATE balance = 50
+    note over DB: Row v1: balance=100 (visible to Tx A) / Row v2: balance=50 (new version, from Tx B)
+    TxB->>DB: COMMIT
+
+    TxA->>DB: SELECT balance
+    DB-->>TxA: 100 (still sees v1 — its snapshot)
+    note over TxA: Readers don't block writers. Writers don't block readers.
+
+    TxA->>DB: COMMIT
+    note over DB: VACUUM eventually removes v1 (dead tuple)
+```
 
 ### 5.4 Locking Strategies
 
@@ -248,12 +326,55 @@ _Best for:_ High-read, low-write workflows (e.g., editing a wiki page).
 </div>
 </div>
 
+```mermaid
+sequenceDiagram
+    participant TxA as Tx A
+    participant DB as Database
+    participant TxB as Tx B
+
+    note over TxA,TxB: Pessimistic Locking
+    TxA->>DB: SELECT * FROM accounts WHERE id=1 FOR UPDATE
+    DB-->>TxA: row locked ✓
+    TxB->>DB: SELECT * FROM accounts WHERE id=1 FOR UPDATE
+    DB-->>TxB: waiting (row locked by Tx A)
+    TxA->>DB: UPDATE balance = balance - 100
+    TxA->>DB: COMMIT (lock released)
+    DB-->>TxB: row now available ✓
+
+    note over TxA,TxB: Optimistic Locking
+    TxA->>DB: SELECT balance, version FROM accounts WHERE id=1
+    DB-->>TxA: balance=500, version=3
+    TxB->>DB: SELECT balance, version FROM accounts WHERE id=1
+    DB-->>TxB: balance=500, version=3
+    TxB->>DB: UPDATE ... WHERE id=1 AND version=3 → SET version=4
+    DB-->>TxB: 1 row updated ✓
+    TxA->>DB: UPDATE ... WHERE id=1 AND version=3 → SET version=4
+    DB-->>TxA: 0 rows updated — conflict! retry
+```
+
 ### 5.5 Deadlocks
 
 A deadlock occurs when two transactions hold locks the other needs, causing them to wait for each other forever.
 
 - **Transaction A:** Locks Row 1, wants Row 2.
 - **Transaction B:** Locks Row 2, wants Row 1.
+
+```mermaid
+flowchart LR
+    TxA["Transaction A"]
+    TxB["Transaction B"]
+    R1["Row 1\n(locked by A)"]
+    R2["Row 2\n(locked by B)"]
+
+    TxA -->|"holds lock"| R1
+    TxA -->|"waiting for"| R2
+    TxB -->|"holds lock"| R2
+    TxB -->|"waiting for"| R1
+
+    DETECT["DB detects cycle\naborts one transaction"]
+    TxA & TxB -.->|"cycle detected"| DETECT
+
+```
 
 The database will detect this and abort one of the transactions.
 _Fix:_ Always acquire locks in the exact same deterministic order (e.g., always lock rows in ascending ID order).
@@ -395,11 +516,48 @@ When a single database node can no longer handle the load, you must scale.
 
 PostgreSQL forks a new OS process for every connection, which consumes significant RAM (usually ~10MB per connection). If you have 50 application servers each opening 20 connections, the database will collapse under memory pressure before hitting CPU limits.
 
+```mermaid
+flowchart LR
+    subgraph Without["Without Pooler — 1000 direct connections → DB collapses"]
+        direction LR
+        A1["App Server 1\n20 conns"] & A2["App Server 2\n20 conns"] & A3["App Server ...\n20 conns"] -->|"1000 connections\n~10 GB RAM"| PG1[("PostgreSQL\n💥 memory pressure")]
+    end
+
+    subgraph With["With PgBouncer — 1000 app connections → 20 DB connections"]
+        direction LR
+        B1["App Server 1\n20 conns"] & B2["App Server 2\n20 conns"] & B3["App Server ...\n20 conns"] -->|"1000 connections"| Pool["PgBouncer\n(multiplexes)"]
+        Pool -->|"20 real connections\n~200 MB RAM"| PG2[("PostgreSQL\n✓ healthy")]
+    end
+```
+
 **The Fix:** Use a connection pooler like **PgBouncer**. It multiplexes thousands of application connections down to a small pool of actual database connections.
 
 ### 8.2 Read Replicas & Replication Lag
 
 To scale read-heavy workloads, you add Read Replicas. The Primary node handles all writes and streams the changes to the Replicas.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Primary as Primary DB (writes)
+    participant Replica as Read Replica (reads)
+
+    User->>App: Update profile
+    App->>Primary: WRITE — UPDATE users SET name=...
+    Primary-->>App: OK
+
+    note over Primary,Replica: Async replication (milliseconds to seconds)
+
+    App-->>User: Redirect to profile page
+
+    User->>App: Load profile page
+    App->>Replica: READ — SELECT * FROM users WHERE id=...
+    Replica-->>App: OLD data (replication lag!)
+    App-->>User: Sees old profile 😕
+
+    note over App: Fix: pin reads to Primary for a short window after a write
+```
 
 > [!WARNING]
 > **FAILURE SCENARIO**
@@ -410,6 +568,26 @@ To scale read-heavy workloads, you add Read Replicas. The Primary node handles a
 ### 8.3 Partitioning vs. Sharding
 
 When a table gets too large (e.g., billions of rows), indexes no longer fit in RAM, and queries slow down.
+
+```mermaid
+flowchart TD
+    subgraph Partitioning["Partitioning — same server, split by value"]
+        direction LR
+        APP1["Application"] --> DB_ONE[("Single DB Server")]
+        DB_ONE --> P1["logs_jan\n(partition)"]
+        DB_ONE --> P2["logs_feb\n(partition)"]
+        DB_ONE --> P3["logs_mar\n(partition)"]
+        note1["Queries pruned to\none partition\nDROP TABLE = instant cleanup"]
+    end
+
+    subgraph Sharding["Sharding — multiple servers, split by key"]
+        direction LR
+        APP2["Application"] --> Router["Shard Router\n(by user_id hash)"]
+        Router --> DB1[("DB Shard 1\nusers A–M")]
+        Router --> DB2[("DB Shard 2\nusers N–Z")]
+        note2["Cross-shard JOINs\nimpossible\nMassive operational cost"]
+    end
+```
 
 <div class="cols-2">
 <div class="col">

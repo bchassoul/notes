@@ -239,8 +239,6 @@ flowchart LR
     BP --> PR1 & PR2 & PRN
     PR1 & PR2 & PRN --> B1
 
-    style Kafka fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Broadway fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 > [!WARNING]
@@ -327,11 +325,6 @@ flowchart TD
     BS --> BC1["BatchProcessor 1"]
     BS --> BC2["BatchProcessor 2"]
 
-    style APP fill:#e6f4ea,stroke:#4caf50,color:#000
-    style BW fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style PS fill:#fff3e0,stroke:#ff9800,color:#000
-    style PRS fill:#fff3e0,stroke:#ff9800,color:#000
-    style BS fill:#fff3e0,stroke:#ff9800,color:#000
 ```
 
 <div class="cols-2">
@@ -444,12 +437,12 @@ Kafka provides **at-least-once delivery**: a message is guaranteed to be deliver
 
 **Idempotency strategies:**
 
-| Strategy | Mechanism | Trade-off |
-| --- | --- | --- |
-| **Idempotency key** | Hash the message content or use Kafka offset as a unique key. Check before processing. | Requires a lookup (DB or cache) per message |
-| **Upsert semantics** | Use `INSERT ... ON CONFLICT UPDATE` in PostgreSQL | Only works for DB writes, not external API calls |
-| **Deduplication window** | Track recent message IDs in an ETS table or Redis with TTL | Bounded memory, but duplicates outside the window slip through |
-| **Idempotent API calls** | Pass an idempotency key to the LLM API (OpenAI supports this) | Depends on the external API supporting it |
+| Strategy                 | Mechanism                                                                              | Trade-off                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Idempotency key**      | Hash the message content or use Kafka offset as a unique key. Check before processing. | Requires a lookup (DB or cache) per message                    |
+| **Upsert semantics**     | Use `INSERT ... ON CONFLICT UPDATE` in PostgreSQL                                      | Only works for DB writes, not external API calls               |
+| **Deduplication window** | Track recent message IDs in an ETS table or Redis with TTL                             | Bounded memory, but duplicates outside the window slip through |
+| **Idempotent API calls** | Pass an idempotency key to the LLM API (OpenAI supports this)                          | Depends on the external API supporting it                      |
 
 ```elixir
 def handle_message(_processor, message, _context) do
@@ -753,13 +746,13 @@ end
 
 **Fallback hierarchy:**
 
-| Priority | Strategy | Trade-off |
-| --- | --- | --- |
-| 1 | Primary AI model (GPT-4o, Claude) | Best quality, highest cost and latency |
-| 2 | Cheaper/faster model (GPT-4o-mini) | Lower quality, lower cost, lower latency |
-| 3 | Heuristic algorithm | No AI cost, deterministic, potentially stale logic |
-| 4 | Cached previous result | Zero latency, may be outdated |
-| 5 | Graceful degradation (queue for later) | No immediate answer, but no wrong answer |
+| Priority | Strategy                               | Trade-off                                          |
+| -------- | -------------------------------------- | -------------------------------------------------- |
+| 1        | Primary AI model (GPT-4o, Claude)      | Best quality, highest cost and latency             |
+| 2        | Cheaper/faster model (GPT-4o-mini)     | Lower quality, lower cost, lower latency           |
+| 3        | Heuristic algorithm                    | No AI cost, deterministic, potentially stale logic |
+| 4        | Cached previous result                 | Zero latency, may be outdated                      |
+| 5        | Graceful degradation (queue for later) | No immediate answer, but no wrong answer           |
 
 > [!TIP]
 > The fallback hierarchy is a product decision, not just an engineering one. "What does the user see when the AI is down?" must have an answer before you build the pipeline.
@@ -823,8 +816,6 @@ flowchart LR
 
     CC -->|"< threshold"| CC2
 
-    style Automated fill:#e6f4ea,stroke:#4caf50,color:#000
-    style Human fill:#f0f4ff,stroke:#7b9cde,color:#000
 ```
 
 **When HITL is necessary:**
@@ -944,24 +935,24 @@ What the TypeScript dashboard receives and sends:
 ```typescript
 // What the dashboard receives via "new_review" event
 interface ReviewPayload {
-  review_id: string
-  shipment_id: string
+  review_id: string;
+  shipment_id: string;
   ai_recommendation: {
-    recommended_route: string
-    estimated_minutes: number
-    confidence: number   // 0.0 – 1.0
-    reasoning: string
-  }
-  risk_level: "low" | "high"
-  expires_at: string    // ISO timestamp — show a countdown timer
+    recommended_route: string;
+    estimated_minutes: number;
+    confidence: number; // 0.0 – 1.0
+    reasoning: string;
+  };
+  risk_level: "low" | "high";
+  expires_at: string; // ISO timestamp — show a countdown timer
 }
 
 // What the operator sends back
 interface ApprovalDecision {
-  review_id: string
-  decision: "approve" | "reject"
-  operator_note?: string
-  override_route?: string  // operator can provide a different route on reject
+  review_id: string;
+  decision: "approve" | "reject";
+  operator_note?: string;
+  override_route?: string; // operator can provide a different route on reject
 }
 ```
 
@@ -1128,8 +1119,6 @@ flowchart LR
 
     KW --> BW2
 
-    style Write fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Read fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 > [!NOTE]
@@ -1262,8 +1251,6 @@ flowchart LR
         REST --> REACT
     end
 
-    style Elixir fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style TS fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 When Broadway finishes processing an AI routing result, it broadcasts via `Phoenix.PubSub`. A Phoenix Channel picks this up and pushes it to connected TypeScript clients in real time.
@@ -1345,16 +1332,16 @@ end
 
 ### 6.4 Key Metrics to Instrument
 
-| Metric | Type | Why it matters |
-| --- | --- | --- |
-| `broadway.message.processing_time` | Histogram | Detect processor slowdowns |
-| `broadway.batch.processing_time` | Histogram | Detect AI API latency spikes |
-| `broadway.message.failed` | Counter | Alert on rising failure rate |
-| `ai.request.duration` | Histogram | Track AI API latency independently |
-| `ai.request.tokens_used` | Counter | Cost tracking and budget alerts |
-| `ai.circuit_breaker.state` | Gauge | Know when fallbacks are active |
-| `kafka.consumer.lag` | Gauge | Detect backlog growth |
-| `kafka.consumer.offset_commit.latency` | Histogram | Detect Kafka broker issues |
+| Metric                                 | Type      | Why it matters                     |
+| -------------------------------------- | --------- | ---------------------------------- |
+| `broadway.message.processing_time`     | Histogram | Detect processor slowdowns         |
+| `broadway.batch.processing_time`       | Histogram | Detect AI API latency spikes       |
+| `broadway.message.failed`              | Counter   | Alert on rising failure rate       |
+| `ai.request.duration`                  | Histogram | Track AI API latency independently |
+| `ai.request.tokens_used`               | Counter   | Cost tracking and budget alerts    |
+| `ai.circuit_breaker.state`             | Gauge     | Know when fallbacks are active     |
+| `kafka.consumer.lag`                   | Gauge     | Detect backlog growth              |
+| `kafka.consumer.offset_commit.latency` | Histogram | Detect Kafka broker issues         |
 
 > [!WARNING]
 > **FAILURE SCENARIO**
@@ -1382,11 +1369,11 @@ LLM output is text. Every downstream pipeline stage needs structured data. Witho
 
 **What each level prevents**
 
-| Level | Failure prevented |
-| --- | --- |
-| JSON mode | `Jason.decode!` crashes |
-| Function calling | Missing required fields |
-| Strict mode | Extra fields, wrong types, missing fields |
+| Level            | Failure prevented                         |
+| ---------------- | ----------------------------------------- |
+| JSON mode        | `Jason.decode!` crashes                   |
+| Function calling | Missing required fields                   |
+| Strict mode      | Extra fields, wrong types, missing fields |
 
 </div>
 </div>
@@ -1402,10 +1389,6 @@ flowchart LR
     B -->|"prevents:\nmissing fields"| C
     C -->|"prevents:\nwrong types,\nextra fields"| D
 
-    style A fill:#fce4ec,stroke:#e91e63,color:#000
-    style B fill:#fff3e0,stroke:#ff9800,color:#000
-    style C fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style D fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 > [!TIP]
@@ -1531,7 +1514,7 @@ sequenceDiagram
 ```
 
 > [!TIP]
-> Only retrieve examples that were marked as *successful* (the route was completed without incident, the driver confirmed the path). Injecting failed examples as demonstrations teaches the model the wrong behavior.
+> Only retrieve examples that were marked as _successful_ (the route was completed without incident, the driver confirmed the path). Injecting failed examples as demonstrations teaches the model the wrong behavior.
 
 **Chain-of-thought (CoT)** causes the model to reason step-by-step before producing its final answer — reducing confident-but-wrong outputs on multi-constraint problems.
 
@@ -1594,8 +1577,6 @@ flowchart LR
         C4["Output (1000t): $0.015"]
     end
 
-    style Request fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Cost fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 The system prompt and few-shot examples are a **fixed cost paid on every single API call**. Reducing the system prompt by 200 tokens on 1M calls saves $1.00. At 10M calls, that's $10.00. At the platform scale described in the JD, this compounds significantly.
@@ -1653,10 +1634,6 @@ flowchart TD
     Q4 -->|"Yes"| BATCH["Batch + GPT-4o-mini\ncost-optimized"]
     Q4 -->|"No"| GPT4O
 
-    style MINI fill:#e6f4ea,stroke:#4caf50,color:#000
-    style GPT4O fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style FALLBACK fill:#fff3e0,stroke:#ff9800,color:#000
-    style BATCH fill:#e6f4ea,stroke:#4caf50,color:#000
 ```
 
 ```elixir
@@ -1717,10 +1694,6 @@ flowchart TD
 
     INVALIDATE(["Road closure event\nreceived"]) --> DELETE["DELETE FROM llm_cache\nWHERE region = affected_region"]
 
-    style LOG fill:#e6f4ea,stroke:#4caf50,color:#000
-    style LLM fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style INVALIDATE fill:#fce4ec,stroke:#e91e63,color:#000
-    style DELETE fill:#fce4ec,stroke:#e91e63,color:#000
 ```
 
 Cache schema and lookup:
@@ -1838,7 +1811,7 @@ config :libcluster,
   ]
 ```
 
-**Headless Services** are the key. A regular Kubernetes Service load-balances traffic to one pod. A headless Service (`clusterIP: None`) returns DNS records for *all* matching pods. libcluster resolves that DNS query and establishes BEAM connections to every returned address, forming a full-mesh cluster.
+**Headless Services** are the key. A regular Kubernetes Service load-balances traffic to one pod. A headless Service (`clusterIP: None`) returns DNS records for _all_ matching pods. libcluster resolves that DNS query and establishes BEAM connections to every returned address, forming a full-mesh cluster.
 
 ```yaml
 # kubernetes/headless-service.yaml
@@ -1851,9 +1824,9 @@ spec:
   selector:
     app: myapp
   ports:
-    - port: 4369  # EPMD
+    - port: 4369 # EPMD
       name: epmd
-    - port: 9000  # Distribution port range start
+    - port: 9000 # Distribution port range start
       name: erlang-dist
 ```
 
@@ -1878,9 +1851,6 @@ flowchart TD
 
     note["libcluster resolves all pod IPs from the headless service\nand connects each node to the others, forming a full-mesh BEAM cluster."]
 
-    style Regular fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Headless fill:#e6f4ea,stroke:#4caf50,color:#000
-    style note fill:#fff3e0,stroke:#ff9800,color:#000
 ```
 
 **Rolling deploy sequence** — what happens when Kubernetes replaces a pod:
@@ -1959,15 +1929,15 @@ The JD calls out Cloudflare Workers AI, Modal.com, and Vertex AI. Each occupies 
 <div class="cols-2">
 <div class="col">
 
-| | Cloudflare Workers AI | Modal.com | Vertex AI |
-| --- | --- | --- | --- |
-| Location | Edge (150+ PoPs) | Cloud (GPU servers) | Cloud (GCP) |
-| Latency | ~50ms globally | ~200ms–30s | ~200ms–minutes |
-| GPU access | Small models only | Any GPU (A100, H100) | Any GPU |
-| Cold start | None (always warm) | ~2–5s | ~10–60s |
-| Cost model | Per request | Per second of GPU time | Per request / per hour |
-| Max model size | ~8B parameters | Unlimited | Unlimited |
-| GCP ecosystem | No | No | Yes |
+|                | Cloudflare Workers AI | Modal.com              | Vertex AI              |
+| -------------- | --------------------- | ---------------------- | ---------------------- |
+| Location       | Edge (150+ PoPs)      | Cloud (GPU servers)    | Cloud (GCP)            |
+| Latency        | ~50ms globally        | ~200ms–30s             | ~200ms–minutes         |
+| GPU access     | Small models only     | Any GPU (A100, H100)   | Any GPU                |
+| Cold start     | None (always warm)    | ~2–5s                  | ~10–60s                |
+| Cost model     | Per request           | Per second of GPU time | Per request / per hour |
+| Max model size | ~8B parameters        | Unlimited              | Unlimited              |
+| GCP ecosystem  | No                    | No                     | Yes                    |
 
 </div>
 <div class="col">
@@ -2004,16 +1974,12 @@ flowchart TD
     Q5 -->|"Yes"| MODAL_B["Modal.com or\nVertex AI Batch"]
     Q5 -->|"No"| CF
 
-    style CF fill:#e6f4ea,stroke:#4caf50,color:#000
-    style MODAL_FT fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style MODAL_B fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style VERTEX fill:#fff3e0,stroke:#ff9800,color:#000
 ```
 
 **The hybrid pattern for logistics** — push cheap filtering to the edge, reserve GPU compute for the events that need it:
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Edge["Edge (Cloudflare, ~50ms)"]
         GPS["GPS Pings\n(from trucks/sensors)"] --> CF["Cloudflare Worker\n(classify: normal / anomaly)"]
         CF -->|"normal (90%)"| KN["Kafka\n(lightweight event)"]
@@ -2030,9 +1996,6 @@ flowchart LR
 
     note["Edge filters 90% of events as normal\n→ only 10% reach cloud inference\n→ 10x cost reduction"]
 
-    style Edge fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style Cloud fill:#e6f4ea,stroke:#4caf50,color:#000
-    style note fill:#fff3e0,stroke:#ff9800,color:#000
 ```
 
 > [!TIP]
@@ -2065,10 +2028,6 @@ flowchart LR
 
     SAME["BroadwayKafka works for\nboth Confluent and MSK\nwith no code changes"]
 
-    style PubSub fill:#fff3e0,stroke:#ff9800,color:#000
-    style Confluent fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style MSK fill:#e6f4ea,stroke:#4caf50,color:#000
-    style SAME fill:#fce4ec,stroke:#e91e63,color:#000
 ```
 
 Broadway producer configuration side by side:
@@ -2161,118 +2120,138 @@ Different producer module. No `group_id`, no partition concept — Pub/Sub manag
 <summary>Explain the demand-driven model in GenStage and why it prevents OOM</summary>
 
 In GenStage, consumers request events from producers by issuing demand — "I can handle N more events." Producers only emit events when demand exists. This inverts the typical push model where producers emit freely. The benefit is structural backpressure: if a consumer slows down, it stops issuing demand, the producer stops emitting, and no unbounded queue forms. In contrast, a push-based system (raw message passing, `cast`) accumulates messages in the consumer's mailbox, growing memory until the process crashes or the node OOMs.
+
 </details>
 
 <details>
 <summary>How do Kafka partitions map to Broadway and what are the ordering implications?</summary>
 
 Each Kafka partition is an ordered log. Broadway assigns partitions to producer processes. Messages from the same partition arrive in order at the processor level, but once they fan out across multiple processor processes (`concurrency: N`), cross-partition ordering is not guaranteed. If ordering matters per entity (e.g., all events for shipment X must be processed in order), partition by entity key in Kafka. This ensures all events for that entity land on the same partition and are processed sequentially.
+
 </details>
 
 <details>
 <summary>Design a Dead Letter Queue strategy for a Broadway pipeline</summary>
 
 Track retry count per message using Kafka headers. In `handle_message`, check the retry count. If it exceeds a threshold (e.g., 3), publish the message to a separate DLQ Kafka topic with the original message, error metadata, and timestamp. Mark the message as failed so Broadway acknowledges and moves past it. The DLQ topic is consumed by a separate, lower-priority pipeline for inspection, alerting, and manual replay. Wrap the processor logic in `try/rescue` to catch unexpected crashes and route them to the DLQ as well.
+
 </details>
 
 <details>
 <summary>How does Broadway propagate backpressure when an AI API degrades?</summary>
 
 Broadway uses GenStage's demand-driven model. When the AI API slows down, batch handlers take longer to return. This means batcher processes are occupied longer, so they stop accepting events from processors. Processors stop issuing demand to producers. Producers stop fetching from Kafka. The backlog grows in Kafka (which is designed for this) rather than in BEAM process memory. When the AI recovers, demand resumes and the backlog drains. No special configuration is needed — this is how GenStage works by default.
+
 </details>
 
 <details>
 <summary>Explain circuit breaker states and design a fallback hierarchy for an AI service</summary>
 
 A circuit breaker has three states. **Closed**: requests flow normally, failures are counted. **Open**: after N failures in a time window, the circuit opens — all requests fail immediately without calling the external service. **Half-Open**: after a timeout, one probe request is allowed through. If it succeeds, the circuit closes. If it fails, it reopens. A fallback hierarchy for AI: (1) primary model (GPT-4o), (2) cheaper model (GPT-4o-mini), (3) heuristic algorithm, (4) cached previous result, (5) queue for later processing. Each level trades quality for reliability.
+
 </details>
 
 <details>
 <summary>Why is idempotency critical in a Kafka + Broadway pipeline, and how do you implement it?</summary>
 
 Kafka provides at-least-once delivery. If a Broadway processor crashes after performing a side effect (API call, DB write) but before acknowledging the Kafka offset, the message will be redelivered. Without idempotency, this means duplicate AI calls (wasting money), duplicate database writes (corrupting state), or duplicate notifications (confusing users). Implementation: generate an idempotency key from the message content or Kafka offset, check a deduplication store (ETS with TTL, Redis, or a PostgreSQL unique constraint) before processing, and use upsert semantics for database writes.
+
 </details>
 
 <details>
 <summary>Design the supervision tree for a logistics AI pipeline and explain each failure domain</summary>
 
 The application supervisor starts Broadway as a child. Broadway internally creates three supervisor subtrees: ProducerSupervisor (manages Kafka consumers), ProcessorSupervisor (manages processor workers), and BatcherSupervisor (manages batcher workers). Each uses `one_for_one` so a crashed processor doesn't affect other processors or the Kafka connection. Outside Broadway, a separate supervisor manages the CircuitBreaker (`:fuse`), the AIClient connection pool, and the JobTracker GenServer for async ML jobs. This keeps AI infrastructure failures isolated from the data pipeline.
+
 </details>
 
 <details>
 <summary>Explain Event Sourcing and CQRS in the context of a logistics platform</summary>
 
 Event Sourcing stores every domain event as an immutable fact: "truck arrived," "package scanned," "route calculated." The Kafka topic is the event log. CQRS separates the write model (append events to Kafka + PostgreSQL event store) from the read model (materialized views optimized for specific queries). A Broadway projector consumes the event stream and updates query-optimized tables. The AI models consume the same stream for training data. The key benefit: the high-throughput write path (millions of GPS pings) doesn't compete with the complex read path (multi-constraint routing queries). The trade-off is eventual consistency between write and read sides.
+
 </details>
 
 <details>
 <summary>How do you trace a request across Kafka → Broadway → AI API → PostgreSQL → Phoenix Channel?</summary>
 
 Inject an OpenTelemetry trace context (traceparent header) into the Kafka message at the producer side. In Broadway's `handle_message`, extract the trace context from Kafka headers and start a child span. When calling the AI API, inject the trace context into the HTTP headers. When writing to PostgreSQL, attach the trace ID as a query comment for `pg_stat_statements` correlation. When broadcasting via Phoenix PubSub, include the trace ID in the payload. The TypeScript client receives the trace ID and can correlate frontend timing with backend traces. This end-to-end trace lets you pinpoint exactly where latency occurred.
+
 </details>
 
 <details>
 <summary>When would you choose Elixir vs TypeScript vs Python for a component in this architecture?</summary>
 
 Elixir for I/O-bound orchestration: consuming Kafka, calling external APIs, managing concurrent connections, real-time WebSocket communication. The BEAM's lightweight processes and supervision make it ideal for coordinating many concurrent operations with fault tolerance. TypeScript for the frontend and API contract layer: React dashboards, type-safe API clients, shared schema validation. Python for ML model development: training, experimentation, batch inference on Modal.com or Vertex AI. The key principle is that the AI model is behind an HTTP API boundary — Elixir doesn't run inference, it orchestrates the call to the service that does.
+
 </details>
 
 <details>
 <summary>What is the difference between JSON mode, function calling, and strict mode in the OpenAI API, and which should you use in a Broadway pipeline?</summary>
 
 JSON mode (`response_format: { type: "json_object" }`) guarantees the model outputs valid JSON, but does not enforce any schema — fields can be missing, typed incorrectly, or extraneous. Function calling defines a JSON schema that the model is asked to fill in; conformance is better than JSON mode but not guaranteed. Strict mode (`strict: true` in the tool definition) guarantees schema conformance — the model cannot produce output that violates the schema. In a Broadway pipeline, use strict mode. The batch handler maps LLM results back to Broadway messages by position; a single malformed response breaks the entire batch. The ~50ms additional latency from strict mode is far cheaper than the debugging cost of intermittent parsing exceptions.
+
 </details>
 
 <details>
 <summary>How do you implement semantic caching for LLM responses, and what are the risks of setting the similarity threshold too low?</summary>
 
 Semantic caching works by embedding each incoming request and querying a pgvector cache table for the nearest stored request. If the cosine similarity exceeds a threshold (typically 0.95), return the cached response without calling the LLM. On a cache miss, call the LLM, store the result with its embedding and a TTL, and return it. The risk of a threshold that is too low: semantically different requests that share many words (e.g., "avoid highways" vs. "highways only") can have cosine similarity of 0.88–0.92 — the cache returns the wrong routing decision silently. Always keep the threshold conservatively high (≥ 0.95 for routing decisions) and add a lightweight constraint-compatibility validation before serving a cache hit.
+
 </details>
 
 <details>
 <summary>Explain the token budget breakdown for a single LLM API call and identify which components are fixed vs. variable costs.</summary>
 
 A single call's token budget has four components: (1) system prompt — fixed cost on every call regardless of the request (typically 300–700 tokens); (2) few-shot examples — fixed cost per call if using static examples, variable if using dynamic RAG-retrieved examples; (3) user input — variable, scales with the complexity of the routing constraints or document; (4) model output — variable, bounded by `max_tokens`. The key insight for cost optimization: the system prompt and static few-shot examples are a tax on every single API call. Trimming 200 tokens from the system prompt on 1M calls saves $1 at GPT-4o rates — modest alone, but compounds with scale. Always set `max_tokens` to cap output; a runaway chain-of-thought response can multiply output cost 4–8x without it.
+
 </details>
 
 <details>
 <summary>When should you use chain-of-thought prompting versus a direct-answer prompt, and what is the cost trade-off?</summary>
 
 Chain-of-thought (CoT) prompting asks the model to reason step-by-step before producing its final answer, improving accuracy on tasks with multiple interdependent constraints (e.g., routing with time windows, vehicle capacity, and fuel cost simultaneously). Use CoT when: the task has more than two competing constraints, accuracy is more important than latency/cost, and errors are expensive (a bad routing decision has real operational cost). Do not use CoT for: classification, tagging, extraction, or any task where the answer is straightforwardly derivable. The cost: a CoT `reasoning` field adds 300–800 output tokens per call. At $15/M output tokens for GPT-4o and 1M daily routing decisions, that is $4,500–12,000/day in additional output cost. Reserve it for genuinely complex decisions and route simpler tasks to GPT-4o-mini without CoT.
+
 </details>
 
 <details>
 <summary>How does libcluster form a BEAM cluster on Kubernetes, and what happens if RBAC permissions are missing?</summary>
 
 libcluster with `Cluster.Strategy.Kubernetes.DNS` queries a headless Kubernetes Service's DNS records. A headless Service (`clusterIP: None`) returns A records for every pod IP in the deployment, rather than routing to a single ClusterIP. libcluster resolves all returned IPs and establishes BEAM distribution connections to each one, forming a full-mesh cluster. For this to work, the pod's ServiceAccount must have `list` and `watch` permissions on the `pods` resource. If RBAC permissions are missing, libcluster cannot call the Kubernetes API, logs a warning, and the pod starts as a standalone singleton. The application continues to work but loses distributed capabilities: Phoenix PubSub broadcasts only reach users connected to the same pod, and distributed GenServer state diverges across pods silently.
+
 </details>
 
 <details>
 <summary>What is a split-brain in a distributed Elixir cluster and how do you design against it?</summary>
 
 Split-brain occurs when a network partition divides a BEAM cluster into two groups that can no longer communicate. Each partition continues to accept traffic believing it is the full cluster. Distributed state — Phoenix PubSub subscriptions, ETS tables replicated across nodes, global GenServers — diverges between the two halves. Users on different partitions see different data. Mitigation: (1) Design state so that individual nodes can operate independently — avoid relying on cluster-wide singletons for critical data. (2) Use `Phoenix.PubSub` as a fan-out layer rather than shared mutable state — a missed broadcast is recoverable, diverged writes are not. (3) Persist authoritative state in PostgreSQL rather than in-memory cluster state — on reconnect, nodes can reconcile from the DB.
+
 </details>
 
 <details>
 <summary>When would you push inference to Cloudflare Workers AI vs. Modal.com vs. Vertex AI?</summary>
 
 The decision turns on model size, latency requirements, and ecosystem. **Cloudflare Workers AI**: use for lightweight classification (≤ 8B parameter models) that must run at sub-100ms latency globally — filtering GPS events at the edge before they hit Kafka, categorizing shipment descriptions at ingestion. No cold start, per-request pricing. **Modal.com**: use for custom or fine-tuned models, large models requiring A100/H100 GPU (LLaMA 70B, custom demand forecasting), and nightly batch prediction jobs. Async job pattern (submit job → webhook on completion). **Vertex AI**: use when already committed to GCP (BigQuery, GCS, GKE) and want a managed MLOps pipeline — Vertex Pipelines for training, Vertex Endpoints for serving, Gemini models via managed API. The hybrid pattern for logistics: edge filters 90% of events cheaply; only anomalies reach cloud GPU inference, reducing cost 10x.
+
 </details>
 
 <details>
 <summary>Compare GCP Pub/Sub, Confluent Cloud, and Amazon MSK as the Broadway message backbone, and explain what changes in the Broadway configuration for each.</summary>
 
 All three are managed message queue services, but they differ in Kafka compatibility and semantics. **GCP Pub/Sub** is not Kafka — it uses `BroadwayCloudPubSub.Producer` instead of `BroadwayKafka.Producer`. It has no consumer groups, no partition offsets, and no ordering guarantees within a topic. Operationally simple, but you lose Kafka's replay, offset management, and schema enforcement. **Confluent Cloud** is full Kafka API and uses `BroadwayKafka.Producer` with SASL/SSL auth to Confluent's brokers. Adds Schema Registry (Avro/Protobuf enforcement), KSQL, and Kafka Connect. Most expensive, most feature-complete. **Amazon MSK** is also native Kafka and uses the same `BroadwayKafka.Producer` module — switching between Confluent and MSK is a config change (hosts + auth), not a code change. MSK is cheaper than Confluent but requires more manual operational work (broker scaling). Choice: Pub/Sub if on GCP and simplicity matters; Confluent if strict schema enforcement and ecosystem features are needed; MSK if on AWS with Kafka semantics at moderate cost.
+
 </details>
 
 <details>
 <summary>When should you introduce a Human-in-the-Loop step in a Broadway AI pipeline, and how does the HITL state machine integrate with the pipeline?</summary>
 
 Introduce HITL when: the AI decision has high-stakes real-world consequences (dispatching trucks, triggering procurement), the model's confidence score falls below a threshold, the input is outside the training distribution, the dollar value exceeds a risk threshold, or compliance rules require human sign-off. In the Broadway pipeline, the batch handler calls the AI model, checks the confidence score, and branches: high-confidence results execute directly; low-confidence results are written to a `pending_reviews` table and broadcast via PubSub to an operator dashboard. A `gen_statem` process manages the approval lifecycle with states `pending_review → approved/rejected/timed_out → executed/fallback_executed/escalated`. The `gen_statem` handles timeouts automatically — low-risk items auto-approve after N minutes, high-risk items escalate to on-call. Broadway ACKs the Kafka message immediately on the low-confidence path; actual execution is triggered by the `gen_statem` transition.
+
 </details>
 
 <details>
 <summary>What is the trade-off between conservative and optimistic HITL execution, and what is the risk of optimistic execution without a compensating action?</summary>
 
 Conservative execution queues the AI decision for human review before taking any action — the truck idles until an operator approves. Zero incorrect actions, but high latency. Optimistic execution dispatches the action immediately and queues for review in parallel — low latency, but if the human rejects it, the system must execute a compensating action (un-dispatch the truck, cancel the order). The risk of optimistic execution without a compensating action: if the rejection arrives after the downstream effect is irreversible (the truck has already loaded), there is no recovery path, leaving the system in an inconsistent state. Only use optimistic execution when a reliable, automated compensating action is defined for every possible downstream effect of the AI decision. The correct model is: "optimistic execution is acceptable only if I can fully undo it."
+
 </details>

@@ -32,7 +32,7 @@ flowchart LR
 > [!NOTE]
 > **FOR ERLANG DEVELOPERS**
 >
-> If you are coming from Erlang, you likely know **Cowboy**. Phoenix runs on Cowboy. 
+> If you are coming from Erlang, you likely know **Cowboy**. Phoenix runs on Cowboy.
 > **Plug** is simply an abstraction layer over Cowboy. Instead of dealing with Cowboy's `Req` object and state, Plug passes an immutable `%Plug.Conn{}` struct through a series of pure functions.
 
 ### 2.1 What a Plug Is
@@ -109,16 +109,48 @@ Phoenix encourages organizing business logic into **Context modules** — plain 
 <div class="col">
 
 **Controllers (Web Layer)**
-Receives `conn` and `params`. Calls the Context. Renders the response. *Should contain zero business logic.*
+Receives `conn` and `params`. Calls the Context. Renders the response. _Should contain zero business logic._
 
 </div>
 <div class="col">
 
 **Contexts (Domain Layer)**
-The public API of your application. Handles validation, database calls (Ecto), and background jobs. *Should know nothing about HTTP or Plugs.*
+The public API of your application. Handles validation, database calls (Ecto), and background jobs. _Should know nothing about HTTP or Plugs._
 
 </div>
 </div>
+
+```mermaid
+flowchart TD
+    subgraph Web["Web Layer (knows about HTTP)"]
+        direction LR
+        HTTP["HTTP Request"] --> Router["Router"]
+        Router --> Plug["Plug Pipeline\n(auth, logging)"]
+        Plug --> Ctrl["Controller\nor Resolver\n(thin — parse, format)"]
+    end
+
+    subgraph Contexts["Domain Layer (knows nothing about HTTP)"]
+        direction LR
+        PAT["Patients\nContext\ncreate_patient/1\nlist_patients/0"]
+        APPT["Appointments\nContext\nschedule/2\ncancel/1"]
+        BILL["Billing\nContext\ncharge/2"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        direction LR
+        DB[("Database\n(Ecto)")]
+        JOBS["Background Jobs\n(Oban)"]
+        EXT["External APIs"]
+    end
+
+    Ctrl -->|"Patients.create_patient(attrs)"| PAT
+    Ctrl -->|"Appointments.schedule(patient, date)"| APPT
+    PAT & APPT & BILL --> DB
+    PAT & APPT --> JOBS
+    APPT --> EXT
+
+    note1["Contexts are the\nboundary wall between\ndomains — they prevent\ncoupling between Patients\nand Billing logic"]
+```
 
 ```
 lib/my_app/
@@ -277,14 +309,6 @@ flowchart LR
     CH --> PS["Phoenix.PubSub"]
     PS --> BW["Broadway\nPipeline"]
 
-    style RC fill:#e6f4ea,stroke:#4caf50,color:#000
-    style HOOK fill:#e6f4ea,stroke:#4caf50,color:#000
-    style SOCK fill:#e6f4ea,stroke:#4caf50,color:#000
-    style EP fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style US fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style CH fill:#f0f4ff,stroke:#7b9cde,color:#000
-    style PS fill:#fff3e0,stroke:#ff9800,color:#000
-    style BW fill:#fff3e0,stroke:#ff9800,color:#000
 ```
 
 Data flows right to left: Broadway processes a shipment event, broadcasts via PubSub, the Channel pushes it over the WebSocket, the Phoenix JS client fires a callback, and React state updates.
@@ -299,29 +323,29 @@ npm install --save-dev @types/phoenix  # if not bundled
 The Phoenix JS package ships its own TypeScript types since Phoenix 1.7. No separate `@types/phoenix` package is needed for recent versions.
 
 ```typescript
-import { Socket, Channel } from "phoenix"
+import { Socket, Channel } from "phoenix";
 
 const socket = new Socket("/socket", {
-  params: { token: userToken }
-})
+  params: { token: userToken },
+});
 
-socket.connect()
+socket.connect();
 ```
 
 **Joining a channel and listening for events:**
 
 ```typescript
-const channel: Channel = socket.channel("shipment:123", {})
+const channel: Channel = socket.channel("shipment:123", {});
 
 channel.on("route_updated", (payload) => {
-  console.log("Route updated:", payload)
-})
+  console.log("Route updated:", payload);
+});
 
 channel
   .join()
   .receive("ok", () => console.log("Joined successfully"))
   .receive("error", (err) => console.error("Failed to join", err))
-  .receive("timeout", () => console.warn("Join timed out"))
+  .receive("timeout", () => console.warn("Join timed out"));
 ```
 
 **Socket and channel lifecycle:**
@@ -355,48 +379,48 @@ Elixir maps serialize to JSON objects. Define TypeScript interfaces for each eve
 // Types for events pushed by the Broadway pipeline via Phoenix Channel
 
 interface RouteUpdatedPayload {
-  shipment_id: string
-  recommended_route: string
-  estimated_minutes: number
-  confidence: number
+  shipment_id: string;
+  recommended_route: string;
+  estimated_minutes: number;
+  confidence: number;
 }
 
 interface ShipmentStatusPayload {
-  shipment_id: string
-  status: "in_transit" | "delayed" | "delivered"
-  updated_at: string
+  shipment_id: string;
+  status: "in_transit" | "delayed" | "delivered";
+  updated_at: string;
 }
 
 // Discriminated union for all events on a shipment channel
 type ShipmentChannelEvent =
   | { event: "route_updated"; payload: RouteUpdatedPayload }
-  | { event: "status_changed"; payload: ShipmentStatusPayload }
+  | { event: "status_changed"; payload: ShipmentStatusPayload };
 ```
 
 Using the discriminated union to handle multiple event types safely:
 
 ```typescript
 function handleChannelEvent(event: string, payload: unknown) {
-  const typed = { event, payload } as ShipmentChannelEvent
+  const typed = { event, payload } as ShipmentChannelEvent;
 
   switch (typed.event) {
     case "route_updated":
       // typed.payload is RouteUpdatedPayload here
-      updateRouteDisplay(typed.payload.recommended_route)
-      break
+      updateRouteDisplay(typed.payload.recommended_route);
+      break;
     case "status_changed":
       // typed.payload is ShipmentStatusPayload here
-      updateStatusBadge(typed.payload.status)
-      break
+      updateStatusBadge(typed.payload.status);
+      break;
   }
 }
 
 channel.on("route_updated", (payload) =>
-  handleChannelEvent("route_updated", payload)
-)
+  handleChannelEvent("route_updated", payload),
+);
 channel.on("status_changed", (payload) =>
-  handleChannelEvent("status_changed", payload)
-)
+  handleChannelEvent("status_changed", payload),
+);
 ```
 
 > [!TIP]
@@ -407,14 +431,14 @@ channel.on("status_changed", (payload) =>
 A custom hook encapsulates the socket lifecycle — setup on mount, cleanup on unmount.
 
 ```typescript
-import { useEffect, useRef, useState } from "react"
-import { Socket, Channel } from "phoenix"
+import { useEffect, useRef, useState } from "react";
+import { Socket, Channel } from "phoenix";
 
 interface UsePhoenixChannelOptions<T> {
-  socketUrl: string
-  token: string
-  topic: string
-  events: Record<string, (payload: T) => void>
+  socketUrl: string;
+  token: string;
+  topic: string;
+  events: Record<string, (payload: T) => void>;
 }
 
 function usePhoenixChannel<T>({
@@ -423,34 +447,34 @@ function usePhoenixChannel<T>({
   topic,
   events,
 }: UsePhoenixChannelOptions<T>) {
-  const [isConnected, setIsConnected] = useState(false)
-  const socketRef = useRef<Socket | null>(null)
-  const channelRef = useRef<Channel | null>(null)
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const channelRef = useRef<Channel | null>(null);
 
   useEffect(() => {
-    const socket = new Socket(socketUrl, { params: { token } })
-    socket.connect()
-    socketRef.current = socket
+    const socket = new Socket(socketUrl, { params: { token } });
+    socket.connect();
+    socketRef.current = socket;
 
-    const channel = socket.channel(topic, {})
-    channelRef.current = channel
+    const channel = socket.channel(topic, {});
+    channelRef.current = channel;
 
     Object.entries(events).forEach(([event, handler]) => {
-      channel.on(event, handler)
-    })
+      channel.on(event, handler);
+    });
 
     channel
       .join()
       .receive("ok", () => setIsConnected(true))
-      .receive("error", () => setIsConnected(false))
+      .receive("error", () => setIsConnected(false));
 
     return () => {
-      channel.leave()
-      socket.disconnect()
-    }
-  }, [socketUrl, token, topic])
+      channel.leave();
+      socket.disconnect();
+    };
+  }, [socketUrl, token, topic]);
 
-  return { isConnected }
+  return { isConnected };
 }
 ```
 
@@ -514,8 +538,8 @@ stateDiagram-v2
 - Listen with `socket.onError()` and `socket.onClose()` for UI feedback
 
 ```typescript
-socket.onError(() => setIsConnected(false))
-socket.onOpen(() => setIsConnected(true))
+socket.onError(() => setIsConnected(false));
+socket.onOpen(() => setIsConnected(true));
 ```
 
 </div>
@@ -529,8 +553,8 @@ socket.onOpen(() => setIsConnected(true))
 
 ```typescript
 channel.onClose(() => {
-  console.warn("Channel closed — will rejoin on reconnect")
-})
+  console.warn("Channel closed — will rejoin on reconnect");
+});
 ```
 
 </div>
@@ -541,9 +565,6 @@ channel.onClose(() => {
 
 ### 9.6 Phoenix Channels vs GraphQL Subscriptions
 
-<div class="cols-2">
-<div class="col">
-
 ```mermaid
 flowchart TD
     subgraph Channels["Phoenix Channels"]
@@ -553,9 +574,6 @@ flowchart TD
         JS --> RS["React state\n(manual update)"]
     end
 ```
-
-</div>
-<div class="col">
 
 ```mermaid
 flowchart TD
@@ -569,16 +587,13 @@ flowchart TD
     end
 ```
 
-</div>
-</div>
-
-| | Phoenix Channels | GraphQL Subscriptions (Apollo + Absinthe) |
-| --- | --- | --- |
-| Setup complexity | Low — one JS client, one hook | Higher — Apollo Client, Absinthe schema |
-| Cache integration | Manual React state | Automatic — Apollo normalizes into cache |
-| Payload shape | Arbitrary JSON (flexible) | Typed GraphQL response (rigid but safe) |
-| Use case | Binary, custom protocols, fine control | Already using GraphQL for queries/mutations |
-| Overhead per event | Very low | Higher (GraphQL parsing per message) |
+|                    | Phoenix Channels                       | GraphQL Subscriptions (Apollo + Absinthe)   |
+| ------------------ | -------------------------------------- | ------------------------------------------- |
+| Setup complexity   | Low — one JS client, one hook          | Higher — Apollo Client, Absinthe schema     |
+| Cache integration  | Manual React state                     | Automatic — Apollo normalizes into cache    |
+| Payload shape      | Arbitrary JSON (flexible)              | Typed GraphQL response (rigid but safe)     |
+| Use case           | Binary, custom protocols, fine control | Already using GraphQL for queries/mutations |
+| Overhead per event | Very low                               | Higher (GraphQL parsing per message)        |
 
 > [!NOTE]
 > **TRADE-OFFS**
@@ -593,58 +608,68 @@ flowchart TD
 <summary>What is a Plug in Phoenix?</summary>
 
 A Plug is a function or module that takes a `%Plug.Conn{}` struct, transforms it, and returns a modified `%Plug.Conn{}`. The entire Phoenix request lifecycle is just a pipeline of Plugs.
+
 </details>
 
 <details>
 <summary>What is the difference between `init/1` and `call/2` in a Module Plug?</summary>
 
 `init/1` runs at **compile time** (or when the supervisor starts the pipeline). It is used to parse options and do heavy lifting once. Its return value is passed as the second argument to `call/2`, which runs at **run time** for every single HTTP request.
+
 </details>
 
 <details>
 <summary>What happens if you try to add a header to a `conn` after `send_resp` has been called?</summary>
 
 It will raise a `Plug.Conn.AlreadySentError`. The `%Plug.Conn{}` struct acts as a state machine. Once it transitions to the "Sent" state, Cowboy has already transmitted the HTTP response over the TCP socket, so headers can no longer be modified.
+
 </details>
 
 <details>
 <summary>What happens if you forget to call `halt(conn)` after sending a 401 Unauthorized response in an auth Plug?</summary>
 
 The request will continue flowing through the rest of the pipeline and eventually hit the controller, potentially executing unauthorized business logic or crashing because the user data isn't present.
+
 </details>
 
 <details>
 <summary>Why is it recommended to use Oban (PostgreSQL) instead of a Redis-backed queue like Exq?</summary>
 
 Because Oban uses the primary database, you can enqueue jobs inside the exact same database transaction as your business logic. If the transaction rolls back, the job is never queued, guaranteeing absolute consistency without needing a two-phase commit.
+
 </details>
 
 <details>
 <summary>What is the difference between a Controller and a Context?</summary>
 
 A Controller is part of the web layer; it parses HTTP requests and formats HTTP responses. A Context is a plain Elixir module that contains the actual business logic and database interactions. Controllers should be thin and delegate work to Contexts.
+
 </details>
 
 <details>
 <summary>Why is `runtime.exs` important for deployment?</summary>
 
 `prod.exs` is evaluated at compile time and baked into the release artifact. `runtime.exs` is evaluated every time the application starts, allowing you to read environment variables (like database URLs or API keys) dynamically without recompiling the code.
+
 </details>
 
 <details>
 <summary>What happens if you forget to call `channel.leave()` and `socket.disconnect()` when a React component unmounts?</summary>
 
 The WebSocket connection remains open on both the client and server after the component is gone. On the server, each connected socket holds a dedicated OTP process for the UserSocket and one per joined Channel. If users navigate around the app without cleanup, the number of open connections grows with each mount/unmount cycle. Eventually the server accumulates hundreds of stale processes consuming memory, degrading node performance until a restart. The fix is a `return () => { channel.leave(); socket.disconnect() }` cleanup function inside the `useEffect` that sets up the socket.
+
 </details>
 
 <details>
 <summary>How does the Phoenix JS client handle WebSocket reconnection, and what does the React hook need to account for?</summary>
 
 The Phoenix JS client reconnects automatically using exponential backoff — it does not require custom retry logic. After the socket reconnects, it automatically re-joins all channels that were previously joined, and re-fires their existing event handlers. The React hook does not need to re-register `channel.on(...)` handlers after a reconnect. However, the hook should update UI state to reflect the disconnected period (e.g., `isConnected: false` during reconnection) and optionally refetch any data that may have changed while the socket was down, since pushed events during the outage were not received.
+
 </details>
 
 <details>
 <summary>When should you use Phoenix Channels instead of GraphQL subscriptions (Apollo + Absinthe) for real-time updates?</summary>
 
 Use Phoenix Channels when: the app does not use GraphQL (adding a full GraphQL schema just for subscriptions is too much overhead), the events are high-frequency and low-latency (GPS pings, live telemetry — GraphQL parsing overhead per message adds up), or you need full control over the payload shape and channel topology. Use Apollo subscriptions when: the app is already GraphQL-first — they integrate directly with the Apollo normalized cache, automatically re-rendering all components that query the updated entity without any manual state management. The key trade-off is flexibility (Channels) vs. cache integration (Apollo subscriptions).
+
 </details>
